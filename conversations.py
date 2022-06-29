@@ -66,21 +66,6 @@ def default_filter_interactional_sequences(chain_sequences, **kwargs):
     tgt_participant = kwargs.get('target_participant', None)
     assert tgt_participant, ValueError('Missing target participant!')
 
-    # Because we only allow one segment to bind with another from a single speaker, some chain might be disconnected
-    # when they shouldn't
-    #
-    # to_skip = set()
-    # for i_t1 in range(len(chain_sequences)):
-    #     if i_t1 in to_skip: continue
-    #     t1_flat = set(chain(*chain_sequences[i_t1]))
-    #     for i_t2 in range(i_t1 + 1, len(chain_sequences)):
-    #         t2_flat = set(chain(*chain_sequences[i_t2]))
-    #
-    #         if len(t1_flat.intersection(t2_flat)):
-    #             chain_sequences[i_t1] = chain_sequences[i_t1] + chain_sequences[i_t2]
-    #             to_skip.add(i_t2)
-    # chain_sequences = [item for idx, item in enumerate(chain_sequences) if idx not in to_skip]
-
     # If allow_multi_unit_turns, filter out chains that do not include the tgt_participant
     chain_sequences = list(filter(
         lambda turns: any([segment.speaker == tgt_participant for segment in chain(*turns)]), chain_sequences))
