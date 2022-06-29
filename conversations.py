@@ -27,6 +27,7 @@ pd.options.display.max_rows = 500
 pd.options.display.min_rows = 500
 
 from .InteractionGraph import InteractionGraph, Segment
+from .graphviz import generate_graphviz
 from .consts import SPK, MODE
 from .utils import flatten, overlaps
 
@@ -192,7 +193,7 @@ def interactional_sequences(segments: pd.DataFrame,
     )
 
     # Label interactional sequence and turns
-    print(interactional_seqs)
+    # print(interactional_seqs)
     flattened_interactional_sequences = list(map(lambda it: sorted([item.index for item in set(flatten(it))]),
                                                  interactional_seqs))
     for index_is, interactional_sequence in enumerate(flattened_interactional_sequences, 1):
@@ -208,7 +209,7 @@ def interactional_sequences(segments: pd.DataFrame,
 
     segments = segments[['segment_onset', 'segment_offset', 'speaker_type', 'recording_filename',
                          'inter_seq_index', 'conv_turn_index', 'inter_seq']]
-    return segments
+    return segments, interactional_seqs
 
 
 def main(**kwargs):
@@ -229,12 +230,12 @@ if __name__ == '__main__':
     segments = segments[~segments["speaker_type"].isnull()]
 
     for recording_name, recording_segments in segments.groupby('recording_filename'):
-        inter_seqs = interactional_sequences(
+        df_inter_seq, raw_inter_seq = interactional_sequences(
                             segments=recording_segments, target_participant=SPK.CHI,
                             interactants=[SPK.FEM, SPK.MAL], allow_multi_unit_turns=True, allow_segment_jump=True,
                             allow_interactions_btw_interactants=True)
-
+        generate_graphviz(interactional_sequences=raw_inter_seq)
         full_path = '~/TEMP/{}.csv'.format(recording_name)
-        inter_seqs.to_csv(full_path, sep='\t', index=False)
-        print(full_path)
-        print(inter_seqs, len(inter_seqs))
+        df_inter_seq.to_csv(full_path, sep='\t', index=False)
+        # print(full_path)
+        # print(df_inter_seq, len(df_inter_seq))
