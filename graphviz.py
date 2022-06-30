@@ -88,14 +88,19 @@ def get_actors(interactional_sequence):
 def generate_graphviz(interactional_sequences):
     for interaction_sequence in interactional_sequences:
         sorted_interaction_sequence_turns = sorted(interaction_sequence, key=lambda tup: tup[0].index)
+        prompts, responses = zip(*sorted_interaction_sequence_turns)
+        only_responses = set(responses) - set(prompts)
+
         actors = get_actors(sorted_interaction_sequence_turns)
 
         actor_subgraphs = build_actors_subgraph(actors)
         sequences_graph = build_sequences_graph(sorted_interaction_sequence_turns)
 
         beginning_node = '{} [shape=doublecircle, color=chartreuse];\n'.format(sorted_interaction_sequence_turns[0][0].index)
-        end_node = '{} [shape=doublecircle, color=crimson];\n'.format(sorted_interaction_sequence_turns[-1][-1].index)
+        end_nodes = ''
+        for end_node in only_responses:
+            end_nodes += '{} [shape=doublecircle, color=crimson];\n'.format(end_node.index)
 
-        graph_content = actor_subgraphs+sequences_graph+beginning_node+end_node
+        graph_content = actor_subgraphs+sequences_graph+beginning_node+end_nodes
         graph = GRAPH_VIZ_MINIMAL_CODE.format(graph_content)
         print(graph)
