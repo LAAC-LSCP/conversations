@@ -17,3 +17,6 @@
 #   Description: 
 #       • 
 # -----------------------------------------------------------------------------
+__version__ = "0.1.0"
+__author__ = 'William N. Havard'
+__credits__ = 'ENS / Laboratoire de Sciences Cognitives et Psycholinguistique, Paris France'
