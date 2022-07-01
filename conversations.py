@@ -234,7 +234,7 @@ if __name__ == '__main__':
                             segments=recording_segments, target_participant=SPK.CHI,
                             interactants=[SPK.FEM, SPK.MAL], allow_multi_unit_turns=True, allow_segment_jump=True,
                             allow_interactions_btw_interactants=True)
-        generate_graphviz(interactional_sequences=raw_inter_seq)
+        generate_graphviz(interactional_sequences=raw_inter_seq, recording_name=recording_name)
         full_path = '~/TEMP/{}.csv'.format(recording_name)
         df_inter_seq.to_csv(full_path, sep='\t', index=False)
         # print(full_path)
