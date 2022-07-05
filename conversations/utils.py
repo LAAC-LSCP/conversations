@@ -20,7 +20,13 @@
 
 from typing import Iterable
 
-from itertools import chain
+from itertools import chain, tee
+
+def pairwise(iterable):
+    "s -> (s0,s1), (s1,s2), (s2, s3), ..."
+    a, b = tee(iterable)
+    next(b, None)
+    return zip(a, b)
 
 def overlaps(onset, offset, target_onset, target_offset):
     return bool(max(0, min(offset, target_offset) - max(onset, target_onset)))

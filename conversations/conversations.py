@@ -27,7 +27,7 @@ pd.options.display.max_rows = 500
 pd.options.display.min_rows = 500
 
 from .InteractionGraph import InteractionGraph, Segment
-from .graphviz import generate_graphviz
+from .graph_visualisation import generate_interactional_sequence_visualisation
 from .consts import SPK, MODE
 from .utils import flatten, overlaps
 
@@ -217,7 +217,7 @@ def main(**kwargs):
 
 
 if __name__ == '__main__':
-    root_path = os.path.join(os.path.abspath(os.path.dirname(__file__)), 'egs')
+    root_path = os.path.join(os.path.abspath(os.path.dirname(__file__)), '..', 'egs')
     files = os.listdir(root_path)
 
     segments = []
@@ -234,7 +234,9 @@ if __name__ == '__main__':
                             segments=recording_segments, target_participant=SPK.CHI,
                             interactants=[SPK.FEM, SPK.MAL], allow_multi_unit_turns=True, allow_segment_jump=True,
                             allow_interactions_btw_interactants=True)
-        generate_graphviz(interactional_sequences=raw_inter_seq, recording_name=recording_name)
+        for inter_seq in raw_inter_seq:
+            print(recording_name)
+            generate_interactional_sequence_visualisation(inter_seq)
         full_path = '~/TEMP/{}.csv'.format(recording_name)
         df_inter_seq.to_csv(full_path, sep='\t', index=False)
         # print(full_path)
