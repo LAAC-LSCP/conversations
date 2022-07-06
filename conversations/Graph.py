@@ -38,9 +38,6 @@ class DirectedGraph(object):
         self._transition_rules = lambda candidate_node, connected_node, **kwargs: True
         self._filtering_rules = lambda chain_sequences, **kwargs: chain_sequences
 
-        self.start_nodes = set()
-        self.end_nodes = set()
-
 
     @classmethod
     def from_tuple_list(cls, tuple_list):
