@@ -41,8 +41,8 @@ class Segment(Node):
 
 
 class InteractionGraph(DirectedGraph):
-    def __init__(self, segments: List[Segment]):
-        super().__init__(nodes=segments)
+    def __init__(self):
+        super().__init__()
 
     @staticmethod
     def source(interactional_sequence):

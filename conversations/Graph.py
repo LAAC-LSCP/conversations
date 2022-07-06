@@ -26,19 +26,27 @@ from typing import Callable, List, Tuple, Union
 class Node(abc.ABC):
     @abc.abstractmethod
     def __init__(self):
-        raise NotImplementedError("{} is an abstract class!")
+        pass
 
 class DirectedGraph(object):
 
-    def __init__(self, nodes: List[Node]) -> None:
-        self.nodes = nodes
-        self.adjacency = {node: set() for node in self.nodes}
+    def __init__(self) -> None:
+        self.adjacency = {}
 
         self._transition_rules = lambda candidate_node, connected_node, **kwargs: True
         self._filtering_rules = lambda chain_sequences, **kwargs: chain_sequences
 
     def add_edge(self, node1:Node, node2: Node) -> None:
+        self.adjacency.setdefault(node1, set())
+        self.adjacency.setdefault(node2, set())
         self.adjacency[node1].add(node2)
+
+    @classmethod
+    def from_tuple_list(cls, tuple_list):
+        graph = cls()
+        for node_tuple in tuple_list:
+            graph.add_edge(*node_tuple)
+        return graph
 
     @property
     def transition_rules(self) -> Callable:
@@ -85,12 +93,12 @@ class DirectedGraph(object):
                     next_nodes_to_visit.extend(next_node_pairs)
 
             if transition:
-                chain_sequences.append(transition)
+                chain_sequences.append(DirectedGraph.from_tuple_list(transition))
 
         return self._apply_filtering_rules(chain_sequences, **kwargs)
 
 
-    def _apply_filtering_rules(self, chain_sequences: List[List[Tuple[Node]]], **kwargs) -> List[List[Tuple[Node]]]:
+    def _apply_filtering_rules(self, chain_sequences: List['DirectedGraph'], **kwargs) -> List['DirectedGraph']:
         assert callable(self._filtering_rules), \
             ValueError('Filtering rules were not set properly or are not callable!')
         return self._filtering_rules(chain_sequences = chain_sequences, **kwargs)
@@ -105,3 +113,9 @@ class DirectedGraph(object):
     def print_adjacencies(self) -> None:
         for key in self.adjacency.keys():
             print("{} {} -> {}".format(type(key), str(key), map(str, self.adjacency[key])))
+
+    def __iter__(self):
+        for input_node in self.adjacency:
+            for output_node in self.adjacency[input_node]:
+                yield (input_node, output_node)
+        return

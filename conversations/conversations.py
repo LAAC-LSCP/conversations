@@ -27,7 +27,6 @@ pd.options.display.max_rows = 500
 pd.options.display.min_rows = 500
 
 from .InteractionGraph import InteractionGraph, Segment
-from .graph_visualisation import generate_interactional_sequence_visualisation
 from .consts import SPK, MODE
 from .utils import flatten, overlaps
 
@@ -168,7 +167,7 @@ def interactional_sequences(segments: pd.DataFrame,
     #
 
     # Build Graph
-    interaction_graph = InteractionGraph(segments=list(segments['node']))
+    interaction_graph = InteractionGraph()
 
     # Populate graph
     # TODO: vectorise
@@ -232,7 +231,7 @@ if __name__ == '__main__':
     for recording_name, recording_segments in segments.groupby('recording_filename'):
         df_inter_seq, raw_inter_seq = interactional_sequences(
                             segments=recording_segments, target_participant=SPK.CHI,
-                            interactants=[SPK.FEM, SPK.MAL], allow_multi_unit_turns=True, allow_segment_jump=True,
+                            interactants=[SPK.FEM, SPK.MAL], allow_multi_unit_turns=False, allow_segment_jump=False,
                             allow_interactions_btw_interactants=True)
         for index_inter_seq, inter_seq in enumerate(raw_inter_seq):
             print(recording_name)
