@@ -20,7 +20,7 @@
 
 import abc
 from itertools import repeat
-from typing import Callable, List, Tuple, Union
+from typing import Callable, List, Tuple, Union, Set, Dict, Optional
 
 
 class Node(abc.ABC):
@@ -40,7 +40,14 @@ class DirectedGraph(object):
 
 
     @classmethod
-    def from_tuple_list(cls, tuple_list):
+    def from_tuple_list(cls, tuple_list: List[Tuple[Node, Node]]):
+        """
+        Create a graph from a list of edges between nodes given as 2-tuple (start_node, end_node)
+        :param tuple_list: list of tuples
+        :type tuple_list: List[Tuple[Node, Node]]
+        :return: a graph
+        :rtype: DirectedGraph
+        """
         graph = cls()
         for node_tuple in tuple_list:
             graph.add_edge(*node_tuple)
@@ -48,46 +55,94 @@ class DirectedGraph(object):
 
 
     def add_edge(self, node1:Node, node2: Node) -> None:
+        """
+        Create an edge between two nodes
+        :param node1: input node
+        :type node1: Node
+        :param node2: output node
+        :type node2: Node
+        :return: None
+        :rtype: None
+        """
         self.adjacency.setdefault(node1, set())
         self.adjacency.setdefault(node2, set())
         self.adjacency[node1].add(node2)
 
 
     @property
-    def start_nodes(self):
-        # Start nodes are nodes that only appear on the left side of an edge
+    def start_nodes(self) -> Set[Node]:
+        """
+        Returns a list of start nodes. A start node is a node that only appears on the left side of an edge
+        :return: set of start nodes
+        :rtype: Set[Node]
+        """
         left_nodes, right_nodes = zip(*list(self))
         return set(left_nodes) - set(right_nodes)
 
 
     @property
     def end_nodes(self):
-        # End nodes are nodes that only appear on the right side of an edge
+        """
+        Returns a list of end nodes. An end node is a node that only appears on the right side of an edge
+        :return: set of end nodes
+        :rtype: Set[Node]
+        """
         left_nodes, right_nodes = zip(*list(self))
         return set(right_nodes) - set(left_nodes)
 
 
     @property
     def transition_rules(self) -> Callable:
+        """
+        Returns the transitions rules used.
+        :return: Function containing the transition rules
+        :rtype: Callable
+        """
         return self._transition_rules
 
 
     @transition_rules.setter
     def transition_rules(self, transition_rules: Callable) -> None:
+        """
+        Sets the transition rules
+        :param transition_rules: A function containing the transition rules to apply
+        :type transition_rules: Callable
+        :return: None
+        :rtype: None
+        """
         self._transition_rules = transition_rules
 
 
     @property
     def filtering_rules(self) -> Union[Callable, None]:
+        """
+        Returns the filtering rules used
+        :return: Function containing the filtering rules
+        :rtype: Union[Callable, None]
+        """
         return self._filtering_rules
 
 
     @filtering_rules.setter
     def filtering_rules(self, filtering_rules: Union[Callable, None]) -> None:
+        """
+        Sets the filtering rules
+        :param filtering_rules: A function containing the filtering rules to apply
+        :type filtering_rules: Callable
+        :return: Union[Callable, None]
+        :rtype: None
+        """
         self._filtering_rules = filtering_rules
 
 
-    def get_connected_components(self, **kwargs) -> List['DirectedGraph']:
+    def get_connected_components(self, **kwargs: Dict) -> List['DirectedGraph']:
+        """
+
+        :param kwargs: dictionary of attributes/values
+        :type kwargs: dict
+        :return: list of connected components as DirectedGraph
+        :rtype: List['DirectedGraph']
+        """
         chain_sequences = []
 
         visited_pairs = set()
@@ -121,7 +176,16 @@ class DirectedGraph(object):
         return self._apply_filtering_rules(chain_sequences, **kwargs)
 
 
-    def get_paths(self, start_node, end_node):
+    def get_paths(self, start_node: Node, end_node: Node) -> List['DirectedGraph']:
+        """
+        Returns all the paths from one node to another
+        :param start_node: Node where to start graph exploration
+        :type start_node: Node
+        :param end_node: Node where to end graph exploration
+        :type end_node: Node
+        :return: list of DirectedGraph
+        :rtype:  List['DirectedGraph']
+        """
         paths = []
 
         queue = [[start_node]]
@@ -140,23 +204,53 @@ class DirectedGraph(object):
 
 
     def _apply_filtering_rules(self, chain_sequences: List['DirectedGraph'], **kwargs) -> List['DirectedGraph']:
+        """
+        Filters a list of graphs and removes items if necessary
+        :param chain_sequences: list of graphs
+        :type chain_sequences: List['DirectedGraph']
+        :param kwargs: dict of attributes/values pairs
+        :type kwargs: dict
+        :return: filtered list of graphs
+        :rtype: List['DirectedGraph']
+        """
         assert callable(self._filtering_rules), \
             ValueError('Filtering rules were not set properly or are not callable!')
         return self._filtering_rules(chain_sequences = chain_sequences, **kwargs)
 
 
-    def _apply_transition_rules(self, candidate_node: Node, connected_node: Node, **kwargs):
+    def _apply_transition_rules(self, candidate_node: Node, connected_node: Node, **kwargs: dict) -> bool:
+        """
+        Apply the transition rules from one node to another
+        :param candidate_node: input node
+        :type candidate_node: Node
+        :param connected_node: output node
+        :type connected_node: Node
+        :param kwargs: dict of attributes/values pairs
+        :type kwargs: dict
+        :return: whether it is possible to go to connected_node from candidate_node
+        :rtype: bool
+        """
         assert callable(self._transition_rules), \
             ValueError('Transition rules were not set properly or are not callable!')
         return self._transition_rules(candidate_node=candidate_node, connected_node= connected_node, **kwargs)
 
 
     def print_adjacencies(self) -> None:
+        """
+        Prints the adjacencies declared in the graph
+        :return: None
+        :rtype: None
+        """
         for key in self.adjacency.keys():
             print("{} {} -> {}".format(type(key), str(key), map(str, self.adjacency[key])))
 
 
-    def __iter__(self):
+    def __iter__(self) -> Optional[Tuple[Node, Node]]:
+        """
+        Create an iterator to go through the edge adjacencies
+        :return: 2-tuple of Nodes or None
+        :rtype: Optional[Tuple[Node, Node]]
+        """
         for input_node in self.adjacency:
             for output_node in self.adjacency[input_node]:
                 yield (input_node, output_node)
