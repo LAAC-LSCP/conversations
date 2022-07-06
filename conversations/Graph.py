@@ -24,9 +24,11 @@ from typing import Callable, List, Tuple, Union
 
 
 class Node(abc.ABC):
+
     @abc.abstractmethod
     def __init__(self):
         pass
+
 
 class DirectedGraph(object):
 
@@ -36,10 +38,9 @@ class DirectedGraph(object):
         self._transition_rules = lambda candidate_node, connected_node, **kwargs: True
         self._filtering_rules = lambda chain_sequences, **kwargs: chain_sequences
 
-    def add_edge(self, node1:Node, node2: Node) -> None:
-        self.adjacency.setdefault(node1, set())
-        self.adjacency.setdefault(node2, set())
-        self.adjacency[node1].add(node2)
+        self.start_nodes = set()
+        self.end_nodes = set()
+
 
     @classmethod
     def from_tuple_list(cls, tuple_list):
@@ -48,21 +49,46 @@ class DirectedGraph(object):
             graph.add_edge(*node_tuple)
         return graph
 
+
+    def add_edge(self, node1:Node, node2: Node) -> None:
+        self.adjacency.setdefault(node1, set())
+        self.adjacency.setdefault(node2, set())
+        self.adjacency[node1].add(node2)
+
+
+    @property
+    def start_nodes(self):
+        # Start nodes are nodes that only appear on the left side of an edge
+        left_nodes, right_nodes = zip(*list(self))
+        return set(left_nodes) - set(right_nodes)
+
+
+    @property
+    def end_nodes(self):
+        # End nodes are nodes that only appear on the right side of an edge
+        left_nodes, right_nodes = zip(*list(self))
+        return set(right_nodes) - set(left_nodes)
+
+
     @property
     def transition_rules(self) -> Callable:
         return self._transition_rules
+
 
     @transition_rules.setter
     def transition_rules(self, transition_rules: Callable) -> None:
         self._transition_rules = transition_rules
 
+
     @property
     def filtering_rules(self) -> Union[Callable, None]:
         return self._filtering_rules
 
+
     @filtering_rules.setter
     def filtering_rules(self, filtering_rules: Union[Callable, None]) -> None:
         self._filtering_rules = filtering_rules
+
 
     def get_chains(self, **kwargs) -> List[List[Tuple[Node]]]:
         chain_sequences = [] # Interactional sequences
@@ -113,6 +139,7 @@ class DirectedGraph(object):
     def print_adjacencies(self) -> None:
         for key in self.adjacency.keys():
             print("{} {} -> {}".format(type(key), str(key), map(str, self.adjacency[key])))
+
 
     def __iter__(self):
         for input_node in self.adjacency:
