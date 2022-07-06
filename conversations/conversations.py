@@ -234,9 +234,12 @@ if __name__ == '__main__':
                             segments=recording_segments, target_participant=SPK.CHI,
                             interactants=[SPK.FEM, SPK.MAL], allow_multi_unit_turns=True, allow_segment_jump=True,
                             allow_interactions_btw_interactants=True)
-        for inter_seq in raw_inter_seq:
+        for index_inter_seq, inter_seq in enumerate(raw_inter_seq):
             print(recording_name)
-            generate_interactional_sequence_visualisation(inter_seq)
+            InteractionGraph.render(interactional_sequence=inter_seq,
+                                    dirpath='/scratch2/whavard/TEMP/graphviz_inter_seq',
+                                    name='{}_{}'.format(recording_name, index_inter_seq),
+                                    format='png')
         full_path = '~/TEMP/{}.csv'.format(recording_name)
         df_inter_seq.to_csv(full_path, sep='\t', index=False)
         # print(full_path)
