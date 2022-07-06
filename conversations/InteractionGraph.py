@@ -44,6 +44,9 @@ class InteractionGraph(DirectedGraph):
     def __init__(self):
         super().__init__()
 
+    def get_interactional_chains(self, **kwargs):
+        return self.get_connected_components(**kwargs)
+
     @staticmethod
     def source(interactional_sequence):
         graph = InteractionGraph._build_graphviz_visualisation(interactional_sequence)

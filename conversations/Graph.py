@@ -87,8 +87,8 @@ class DirectedGraph(object):
         self._filtering_rules = filtering_rules
 
 
-    def get_chains(self, **kwargs) -> List[List[Tuple[Node]]]:
-        chain_sequences = [] # Interactional sequences
+    def get_connected_components(self, **kwargs) -> List['DirectedGraph']:
+        chain_sequences = []
 
         visited_pairs = set()
         for node in self.adjacency.keys():
@@ -98,7 +98,7 @@ class DirectedGraph(object):
             next_node_pairs = list(zip(repeat(candidate_node, len(connected_nodes)), connected_nodes))
             next_nodes_to_visit = next_node_pairs
 
-            transition = [] # Conversational turn
+            transition = []
             while(next_nodes_to_visit):
                 node_pair = next_nodes_to_visit.pop()
                 candidate_node, connected_node = node_pair
