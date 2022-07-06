@@ -121,6 +121,24 @@ class DirectedGraph(object):
         return self._apply_filtering_rules(chain_sequences, **kwargs)
 
 
+    def get_paths(self, start_node, end_node):
+        paths = []
+
+        queue = [[start_node]]
+        while queue:
+            tmp_path = queue.pop()
+            last_node = tmp_path[-1]
+
+            if last_node == end_node:
+                paths.append(tmp_path.copy())
+
+            for link_node in self.adjacency[last_node]:
+                if link_node not in tmp_path:
+                    new_path = tmp_path + [link_node]
+                    queue.append(new_path)
+        return paths
+
+
     def _apply_filtering_rules(self, chain_sequences: List['DirectedGraph'], **kwargs) -> List['DirectedGraph']:
         assert callable(self._filtering_rules), \
             ValueError('Filtering rules were not set properly or are not callable!')

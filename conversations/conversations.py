@@ -182,7 +182,7 @@ def interactional_sequences(segments: pd.DataFrame,
     interaction_graph.filtering_rules = filter_interactional_sequences
 
     # Get interactions
-    interactional_seqs = interaction_graph.get_chains(
+    interactional_seqs = interaction_graph.get_interactional_chains(
         # kwargs will be used by the transition and filtering rules
         target_participant = target_participant,
         interactants = interactants,
@@ -231,14 +231,20 @@ if __name__ == '__main__':
     for recording_name, recording_segments in segments.groupby('recording_filename'):
         df_inter_seq, raw_inter_seq = interactional_sequences(
                             segments=recording_segments, target_participant=SPK.CHI,
-                            interactants=[SPK.FEM, SPK.MAL], allow_multi_unit_turns=False, allow_segment_jump=False,
+                            interactants=[SPK.FEM, SPK.MAL], allow_multi_unit_turns=True, allow_segment_jump=True,
                             allow_interactions_btw_interactants=True)
         for index_inter_seq, inter_seq in enumerate(raw_inter_seq):
-            print(recording_name)
+            print(recording_name, index_inter_seq)
             InteractionGraph.render(interactional_sequence=inter_seq,
                                     dirpath='/scratch2/whavard/TEMP/graphviz_inter_seq',
                                     name='{}_{}'.format(recording_name, index_inter_seq),
                                     format='png')
+
+            start_node = inter_seq.start_nodes.pop()
+            for end_node in inter_seq.end_nodes:
+                paths = inter_seq.get_paths(start_node, end_node)
+                for path in paths:
+                    print('\t'+' -> '.join([str(i.index) for i in path]))
         full_path = '~/TEMP/{}.csv'.format(recording_name)
         df_inter_seq.to_csv(full_path, sep='\t', index=False)
         # print(full_path)
