@@ -20,7 +20,9 @@
 
 import abc
 from itertools import repeat
-from typing import Callable, List, Tuple, Union, Set, Dict, Optional
+from typing import Callable, List, Tuple, Set, Dict, Optional
+
+from .utils import pairwise
 
 
 class Node(abc.ABC):
@@ -30,13 +32,25 @@ class Node(abc.ABC):
         pass
 
 
-class DirectedGraph(object):
+class Graph(abc.ABC):
 
-    def __init__(self) -> None:
-        self.adjacency = {}
+    @abc.abstractmethod
+    def __init__(self):
+        pass
 
+
+class DirectedGraph(Graph):
+
+    def __init__(self, transition_rules: Optional[Callable]= None) -> None:
+        # Stores nodes and edges
+        self.adjacency = dict()
+
+        # Define transition rules to go from one node to another
+        # By default, transitions are allowed from any node to another linked by and edge
         self._transition_rules = lambda candidate_node, connected_node, **kwargs: True
-        self._filtering_rules = lambda chain_sequences, **kwargs: chain_sequences
+
+        if transition_rules:
+            self.transition_rules = transition_rules
 
 
     @classmethod
@@ -67,6 +81,21 @@ class DirectedGraph(object):
         self.adjacency.setdefault(node1, set())
         self.adjacency.setdefault(node2, set())
         self.adjacency[node1].add(node2)
+
+
+    def stats(self) -> dict:
+        return {'num_edges': self.num_edges,
+                'num_nodes': self.num_nodes}
+
+
+    @property
+    def num_edges(self) -> int:
+        return sum(map(len, self.adjacency.values()))
+
+
+    @property
+    def num_nodes(self) -> int:
+        return len(self.adjacency.keys())
 
 
     @property
@@ -110,32 +139,12 @@ class DirectedGraph(object):
         :return: None
         :rtype: None
         """
+        assert callable(self.transition_rules), \
+            ValueError('Transition rules were not set properly or are not callable!')
         self._transition_rules = transition_rules
 
 
-    @property
-    def filtering_rules(self) -> Union[Callable, None]:
-        """
-        Returns the filtering rules used
-        :return: Function containing the filtering rules
-        :rtype: Union[Callable, None]
-        """
-        return self._filtering_rules
-
-
-    @filtering_rules.setter
-    def filtering_rules(self, filtering_rules: Union[Callable, None]) -> None:
-        """
-        Sets the filtering rules
-        :param filtering_rules: A function containing the filtering rules to apply
-        :type filtering_rules: Callable
-        :return: Union[Callable, None]
-        :rtype: None
-        """
-        self._filtering_rules = filtering_rules
-
-
-    def get_connected_components(self, **kwargs: Dict) -> List['DirectedGraph']:
+    def get_connected_components(self, **kwargs: Dict) -> List[Graph]:
         """
 
         :param kwargs: dictionary of attributes/values
@@ -173,10 +182,18 @@ class DirectedGraph(object):
             if transition:
                 chain_sequences.append(DirectedGraph.from_tuple_list(transition))
 
-        return self._apply_filtering_rules(chain_sequences, **kwargs)
+        return chain_sequences
 
 
-    def get_paths(self, start_node: Node, end_node: Node) -> List['DirectedGraph']:
+    def get_all_paths(self):
+        paths = []
+        for start_node in self.start_nodes:
+            for end_node in self.end_nodes:
+                paths.extend(self.get_paths(start_node, end_node))
+        return paths
+
+
+    def get_paths(self, start_node: Node, end_node: Node) -> List[Graph]:
         """
         Returns all the paths from one node to another
         :param start_node: Node where to start graph exploration
@@ -200,22 +217,9 @@ class DirectedGraph(object):
                 if link_node not in tmp_path:
                     new_path = tmp_path + [link_node]
                     queue.append(new_path)
+
+        paths = [DirectedGraph.from_tuple_list(pairwise(path)) for path in paths]
         return paths
-
-
-    def _apply_filtering_rules(self, chain_sequences: List['DirectedGraph'], **kwargs) -> List['DirectedGraph']:
-        """
-        Filters a list of graphs and removes items if necessary
-        :param chain_sequences: list of graphs
-        :type chain_sequences: List['DirectedGraph']
-        :param kwargs: dict of attributes/values pairs
-        :type kwargs: dict
-        :return: filtered list of graphs
-        :rtype: List['DirectedGraph']
-        """
-        assert callable(self._filtering_rules), \
-            ValueError('Filtering rules were not set properly or are not callable!')
-        return self._filtering_rules(chain_sequences = chain_sequences, **kwargs)
 
 
     def _apply_transition_rules(self, candidate_node: Node, connected_node: Node, **kwargs: dict) -> bool:
@@ -230,8 +234,6 @@ class DirectedGraph(object):
         :return: whether it is possible to go to connected_node from candidate_node
         :rtype: bool
         """
-        assert callable(self._transition_rules), \
-            ValueError('Transition rules were not set properly or are not callable!')
         return self._transition_rules(candidate_node=candidate_node, connected_node= connected_node, **kwargs)
 
 
