@@ -138,7 +138,7 @@ def generate_interactional_sequence_visualisation(interactional_sequence, label_
     prompts, responses = zip(*sorted_interaction_sequence_turns)
 
     segment_onsets = set([(str(s.index), 'TL{}'.format(s.onset)) for s in prompts+responses])
-    segment_onsets = sorted(segment_onsets, key=lambda tup: tup[-1])
+    segment_onsets = sorted(segment_onsets, key=lambda tup: int(tup[-1].replace('TL', '')))
 
     actors_name_segments = get_actors(interactional_sequence)
 
