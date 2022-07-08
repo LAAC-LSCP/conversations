@@ -24,6 +24,7 @@ from .conversations import Conversation
 from .defaults import default_filtering_rules, default_turn_transition_rules, \
                       default_path_selection_rules, default_statistics
 
+
 def main():
     root_path = os.path.join(os.path.abspath(os.path.dirname(__file__)), '..', 'egs')
     files = os.listdir(root_path)
@@ -36,10 +37,9 @@ def main():
                                 allow_multi_unit_turns=True,
                                 allow_interactions_btw_interactants=True,
                                 turn_transition_rules=default_turn_transition_rules,
-                                filtering_rules = default_filtering_rules,
+                                filtering_rules=default_filtering_rules,
                                 best_path_selection_rules=default_path_selection_rules,
                                 graph_statistics=default_statistics)
-
 
     for file in files:
         print(file)
@@ -47,16 +47,18 @@ def main():
         data = Conversation.from_csv(os.path.join(root_path, file))
         data = data[~data['speaker_type'].isnull()]
 
-        # Prepare the data
+        # Retrieve interactional sequences
         interactional_sequences = conversation.get_interational_sequences(data)
 
-        # Save them to CSV
+        # Iterate over the interactional sequences
         for idx, interactional_sequence in enumerate(interactional_sequences):
-            print(idx)
+            # Print some descriptive information
             print(interactional_sequence.stats())
-            interactional_sequence.render(dirpath="/scratch2/whavard/TEMP", name="{}_{}".format(file, idx), format='png')
-            print(interactional_sequence)
-            print('---')
+            # And plot a graph representing the interactional sequence!
+            interactional_sequence.render(dirpath="/scratch2/whavard/TEMP",
+                                          name="{}_{}".format(file, idx),
+                                          format='png')
+
 
 if __name__ == '__main__':
     main()

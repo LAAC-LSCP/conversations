@@ -25,11 +25,12 @@ from .utils import pairwise
 
 NODE_START_COLOR = 'chartreuse'
 NODE_END_COLOR = 'crimson'
-COLOR_LIST = ["lightpink","lightyellow","lightskyblue",
-              "lightgoldenrodyellow","lightcyan","lightsteelblue",
-              "lightgrey","lightslategray","lightblue",
-              "lightgray","lightgoldenrod","lightsalmon",
-              "lightseagreen","lightslateblue","lightgreen","lightcoral"]
+COLOR_LIST = ["lightpink", "lightyellow", "lightskyblue",
+              "lightgoldenrodyellow", "lightcyan", "lightsteelblue",
+              "lightgrey", "lightslategray", "lightblue",
+              "lightgray", "lightgoldenrod", "lightsalmon",
+              "lightseagreen", "lightslateblue", "lightgreen", "lightcoral"]
+
 
 def get_actors(interactional_sequence):
     actors = dict()
@@ -43,6 +44,7 @@ def get_actors(interactional_sequence):
         actors[key] = sorted(actors[key], key=lambda s: s.onset)
 
     return actors
+
 
 def _timeline_subgraph(segment_onsets):
     tl_subgraph = graphviz.Digraph(edge_attr={'style': 'invis'},
@@ -58,15 +60,17 @@ def _timeline_subgraph(segment_onsets):
     
     return tl_subgraph
 
+
 def _actor_subgraph(actor_names):
     # Actor subgraph
     actor_subgraph = graphviz.Digraph(edge_attr={'style': 'invis'},
-                                      node_attr={'shape':'plaintext'},
-                                      graph_attr={'rank':'same'})
+                                      node_attr={'shape': 'plaintext'},
+                                      graph_attr={'rank': 'same'})
     for begin, end in pairwise(sorted(actor_names)):
         actor_subgraph.edge(begin, end)
 
     return actor_subgraph
+
 
 def _segment_subgraphs(actors_name_segments, start_nodes, end_nodes):
     graphs = []
@@ -77,7 +81,7 @@ def _segment_subgraphs(actors_name_segments, start_nodes, end_nodes):
         segment_subgraph = graphviz.Digraph(name='cluster_{}'.format(actor_name),
                                             edge_attr={'style': 'invis'},
                                             node_attr={'shape': 'box'},
-                                            graph_attr={"bgcolor":next(graph_colors)})
+                                            graph_attr={"bgcolor": next(graph_colors)})
         # Add begin node and end node
         segment_subgraph.node(actor_name, group='GR{}'.format(actor_name), shape="plaintext")
         segment_subgraph.node('{}END'.format(actor_name), group='GR{}'.format(actor_name), style='invis')
@@ -104,6 +108,7 @@ def _segment_subgraphs(actors_name_segments, start_nodes, end_nodes):
 
     return graphs
 
+
 def _turn_subgraph(interactional_sequence, label_edges=False):
     prompt_response_subgraph = graphviz.Digraph()
     # Add prompt/response edges
@@ -112,6 +117,7 @@ def _turn_subgraph(interactional_sequence, label_edges=False):
         prompt_response_subgraph.edge(str(prompt), str(response), label=label)
 
     return prompt_response_subgraph
+
 
 def _timeline_alignment_subgraphs(segment_onsets, actor_names):
     graphs = []
@@ -132,6 +138,7 @@ def _timeline_alignment_subgraphs(segment_onsets, actor_names):
 
     return graphs
 
+
 def generate_interactional_sequence_visualisation(interactional_sequence, label_edges=False):
     # Sort segments by onset
     sorted_interaction_sequence_turns = sorted(interactional_sequence, key=lambda tup: tup[0].onset)
@@ -143,11 +150,11 @@ def generate_interactional_sequence_visualisation(interactional_sequence, label_
     actors_name_segments = get_actors(interactional_sequence)
 
     # Get start and end nodes
-    start_nodes = set(prompts) - set(responses) # all prompts that are not responses
-    end_nodes = set(responses) - set(prompts)   # all responses that are not prompts
+    start_nodes = set(prompts) - set(responses)  # all prompts that are not responses
+    end_nodes = set(responses) - set(prompts)    # all responses that are not prompts
 
     # Graph
-    graph = graphviz.Digraph(graph_attr={"rankdir":"LR", 'labeljust':'l', "newrank":"true"})
+    graph = graphviz.Digraph(graph_attr={"rankdir": "LR", 'labeljust': 'l', "newrank": "true"})
 
     actor_subgraph = _actor_subgraph(actors_name_segments.keys())
     timeline_subgraph = _timeline_subgraph(segment_onsets)

@@ -41,7 +41,7 @@ class Graph(abc.ABC):
 
 class DirectedGraph(Graph):
 
-    def __init__(self, transition_rules: Optional[Callable]= None) -> None:
+    def __init__(self, transition_rules: Optional[Callable] = None) -> None:
         # Stores nodes and edges
         self.adjacency = dict()
 
@@ -51,7 +51,6 @@ class DirectedGraph(Graph):
 
         if transition_rules:
             self.transition_rules = transition_rules
-
 
     @classmethod
     def from_tuple_list(cls, tuple_list: List[Tuple[Node, Node]]):
@@ -67,8 +66,7 @@ class DirectedGraph(Graph):
             graph.add_edge(*node_tuple)
         return graph
 
-
-    def add_edge(self, node1:Node, node2: Node) -> None:
+    def add_edge(self, node1: Node, node2: Node) -> None:
         """
         Create an edge between two nodes
         :param node1: input node
@@ -82,21 +80,17 @@ class DirectedGraph(Graph):
         self.adjacency.setdefault(node2, set())
         self.adjacency[node1].add(node2)
 
-
     def stats(self) -> dict:
         return {'num_edges': self.num_edges,
                 'num_nodes': self.num_nodes}
-
 
     @property
     def num_edges(self) -> int:
         return sum(map(len, self.adjacency.values()))
 
-
     @property
     def num_nodes(self) -> int:
         return len(self.adjacency.keys())
-
 
     @property
     def start_nodes(self) -> Set[Node]:
@@ -108,7 +102,6 @@ class DirectedGraph(Graph):
         left_nodes, right_nodes = zip(*list(self))
         return set(left_nodes) - set(right_nodes)
 
-
     @property
     def end_nodes(self):
         """
@@ -119,7 +112,6 @@ class DirectedGraph(Graph):
         left_nodes, right_nodes = zip(*list(self))
         return set(right_nodes) - set(left_nodes)
 
-
     @property
     def transition_rules(self) -> Callable:
         """
@@ -128,7 +120,6 @@ class DirectedGraph(Graph):
         :rtype: Callable
         """
         return self._transition_rules
-
 
     @transition_rules.setter
     def transition_rules(self, transition_rules: Callable) -> None:
@@ -142,7 +133,6 @@ class DirectedGraph(Graph):
         assert callable(self.transition_rules), \
             ValueError('Transition rules were not set properly or are not callable!')
         self._transition_rules = transition_rules
-
 
     def get_connected_components(self, **kwargs: Dict) -> List[Graph]:
         """
@@ -163,7 +153,7 @@ class DirectedGraph(Graph):
             next_nodes_to_visit = next_node_pairs
 
             transition = []
-            while(next_nodes_to_visit):
+            while next_nodes_to_visit:
                 node_pair = next_nodes_to_visit.pop()
                 candidate_node, connected_node = node_pair
 
@@ -184,14 +174,12 @@ class DirectedGraph(Graph):
 
         return chain_sequences
 
-
     def get_all_paths(self):
         paths = []
         for start_node in self.start_nodes:
             for end_node in self.end_nodes:
                 paths.extend(self.get_paths(start_node, end_node))
         return paths
-
 
     def get_paths(self, start_node: Node, end_node: Node) -> List[Graph]:
         """
@@ -221,7 +209,6 @@ class DirectedGraph(Graph):
         paths = [DirectedGraph.from_tuple_list(pairwise(path)) for path in paths]
         return paths
 
-
     def _apply_transition_rules(self, candidate_node: Node, connected_node: Node, **kwargs: dict) -> bool:
         """
         Apply the transition rules from one node to another
@@ -234,8 +221,7 @@ class DirectedGraph(Graph):
         :return: whether it is possible to go to connected_node from candidate_node
         :rtype: bool
         """
-        return self._transition_rules(candidate_node=candidate_node, connected_node= connected_node, **kwargs)
-
+        return self._transition_rules(candidate_node=candidate_node, connected_node=connected_node, **kwargs)
 
     def print_adjacencies(self) -> None:
         """
@@ -246,7 +232,6 @@ class DirectedGraph(Graph):
         for key in self.adjacency.keys():
             print("{} {} -> {}".format(type(key), str(key), map(str, self.adjacency[key])))
 
-
     def __iter__(self) -> Optional[Tuple[Node, Node]]:
         """
         Create an iterator to go through the edge adjacencies
@@ -255,5 +240,5 @@ class DirectedGraph(Graph):
         """
         for input_node in self.adjacency:
             for output_node in self.adjacency[input_node]:
-                yield (input_node, output_node)
+                yield input_node, output_node
         return

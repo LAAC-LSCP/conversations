@@ -19,7 +19,7 @@
 # -----------------------------------------------------------------------------
 
 import os
-from typing import Callable, Union, List, Optional
+from typing import Callable, Optional
 
 from .Graph import DirectedGraph, Node
 from .graph_visualisation import generate_interactional_sequence_visualisation
@@ -32,35 +32,28 @@ class Segment(Node):
         self._onset = onset
         self._offset = offset
 
-
     @property
     def speaker(self):
         return self._speaker
-
 
     @property
     def index(self):
         return self._index
 
-
     @property
     def onset(self):
         return self._onset
-
 
     @property
     def duration(self):
         return self.offset - self.onset
 
-
     @property
     def offset(self):
         return self._offset
 
-
     def __str__(self):
         return str(self.index)
-
 
     def __repr__(self):
         return '<{}: Index {} Speaker {} ({},{}) at {}>'.format(type(self).__name__,
@@ -85,11 +78,9 @@ class InteractionalSequence(object):
 
         return statistics
 
-
     def source(self):
         graph = self._to_graph_viz()
         return graph.source
-
 
     def render(self, dirpath, name, format, remove_gv=False):
         full_filepath = os.path.join(dirpath, '{}.gv'.format(name))
@@ -98,10 +89,8 @@ class InteractionalSequence(object):
         if remove_gv:
             os.remove(full_filepath)
 
-
     def _to_graph_viz(self):
         return generate_interactional_sequence_visualisation(self._interactional_sequence)
-
 
     def __iter__(self):
         return iter(self._interactional_sequence)

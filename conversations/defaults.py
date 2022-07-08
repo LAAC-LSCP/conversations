@@ -22,6 +22,7 @@
 from itertools import chain
 from .utils import flatten
 
+
 def default_turn_transition_rules(candidate_node, connected_node, **kwargs):
     tgt_participant = kwargs.get('target_participant', None)
     interactants = kwargs.get('interactants', None)
@@ -61,13 +62,12 @@ def default_filtering_rules(chain_sequences, **kwargs):
     chain_sequences = list(filter(
         lambda turns: any([segment.speaker == tgt_participant for segment in chain(*turns)]), chain_sequences))
 
-
     return chain_sequences
 
 
 def default_path_selection_rules(list_of_path, **kwargs):
     sorted_path = sorted(list_of_path,
-                         key = lambda path: path.stats()['num_turns'],
+                         key=lambda path: path.stats()['num_turns'],
                          reverse=True)
     return sorted_path[0]
 

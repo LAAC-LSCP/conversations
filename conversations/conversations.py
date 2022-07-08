@@ -18,6 +18,11 @@
 #       •
 # -----------------------------------------------------------------------------
 
+from .Graph import DirectedGraph
+from .Interactions import InteractionalSequence, Segment
+from .utils import flatten, overlaps
+from .defaults import default_turn_transition_rules, default_filtering_rules, default_statistics
+
 import os
 from itertools import chain
 from typing import List, Union, Callable, Optional
@@ -28,20 +33,15 @@ from pprint import pprint
 pd.options.display.max_rows = 500
 pd.options.display.min_rows = 500
 
-from .Graph import DirectedGraph
-from .Interactions import InteractionalSequence, Segment
-from .utils import flatten, overlaps
-from .defaults import default_turn_transition_rules, default_filtering_rules, default_statistics
 
 class InteractionalSequences(object):
-    def __init__(self, data, interactional_sequences, **kwargs):
+    def __init__(self, data, interactional_sequences):
         self._data = data
         self._interactional_sequences = interactional_sequences
 
     @property
     def interactional_sequences(self):
         return self._interactional_sequences
-
 
     def to_dataframe(self):
         segments = self._data
@@ -62,24 +62,19 @@ class InteractionalSequences(object):
 
         return segments
 
-
     def __get__(self, index):
         return self._interactional_sequences[index]
-
 
     def __iter__(self) -> InteractionalSequence:
         for interacational_sequence in self._interactional_sequences:
             yield interacational_sequence
         return
 
-
     def __len__(self):
         return len(self._interactional_sequences)
 
-
     def to_csv(self):
         raise NotImplementedError
-
 
     def to_chattr(self):
         raise NotImplementedError
@@ -87,26 +82,19 @@ class InteractionalSequences(object):
 
 class Conversation(object):
 
-    def __init__(self,
-                        # target_participant: Union[SPK, str],
-                        # interactants:Optional[Union[List[str], List[SPK]]] = None,
-                        # Segment connectivity
-                        allowed_gap: int = 1000, allowed_overlap:int =0,
+    def __init__(self,  # Segment connectivity
+                        allowed_gap: int = 1000, allowed_overlap: int = 0,
                         allow_segment_jump: bool = False,
                         # Filtering
-                        min_utt_dur: int = 0, max_utt_dur:int = 0,
-                        lx_only:Union[bool, str] = False, lx_col: Union[None, str] = None,
+                        min_utt_dur: int = 0, max_utt_dur: int = 0,
+                        lx_only: Union[bool, str] = False, lx_col: Union[None, str] = None,
                         # Transitions and filtering rules
                         turn_transition_rules: Optional[Callable] = None,
                         best_path_selection_rules: Optional[Callable] = None,
                         graph_statistics: Optional[Callable] = default_statistics,
                         filtering_rules: Optional[Callable] = None,
-                        # Parameters used by the default transition/filtering rules
-                        # allow_multi_unit_turns:bool = False,
-                        # allow_interactions_btw_interactants: bool = False,
                         **kwargs,
                  ):
-
 
         if allowed_overlap: raise NotImplementedError
 
@@ -123,10 +111,6 @@ class Conversation(object):
         if lx_only:
             assert lx_col and type(lx_only) != str, \
                 ValueError('Specify which column should be used to assert linguitic type using lx_col parameter.')
-
-        # Speakers
-        # self._target_participant = target_participant
-        # self._interactants = interactants
 
         # Segment connectivity
         self._allowed_gap = allowed_gap
@@ -145,23 +129,7 @@ class Conversation(object):
         self._graph_statistics = graph_statistics
         self._best_path_selection_rules = best_path_selection_rules
 
-        # Parameters used by the default transition
-        # self._allow_multi_unit_turns = allow_multi_unit_turns
-        # self._allow_interactions_btw_interactants = allow_interactions_btw_interactants
-
         self._kwargs = kwargs
-
-    #
-    #   Properties
-    #   (read-only attributes)
-    #
-    # @property
-    # def target_participant(self):
-    #     return self._target_participant
-    #
-    # @property
-    # def interactants(self):
-    #     return self._interactants
     
     @property
     def allowed_gap(self):
@@ -207,14 +175,6 @@ class Conversation(object):
     def best_path_selection_rules(self):
         return self._best_path_selection_rules
 
-    # @property
-    # def allow_multi_unit_turns(self):
-    #     return self._allow_multi_unit_turns
-    #
-    # @property
-    # def allow_interactions_btw_interactants(self):
-    #     return self._allow_interactions_btw_interactants
-    #
     #
     #   I/O
     #
@@ -222,7 +182,6 @@ class Conversation(object):
     def from_csv(cls, filepath):
         # TODO: add assertion to make sure we have the fields we need
         return pd.read_csv(filepath)
-
 
     @classmethod
     def from_rttm(cls, filepath):
@@ -245,7 +204,7 @@ class Conversation(object):
         if not self.lx_only:
             return segments
 
-        lx_re = self.lx_only if type(self.lx_only) == str else r'^(?:(?!(J|Y)).)*$' # Remove VCM cries and junk
+        lx_re = self.lx_only if type(self.lx_only) == str else r'^(?:(?!(J|Y)).)*$'  # Remove VCM cries and junk
         segments = segments[segments[self.lx_col].fillna('').str.match(lx_re)]
 
         return segments
@@ -253,18 +212,18 @@ class Conversation(object):
     def _segments_to_nodes(self, segments):
         # Build node for each segment
         # TODO: allow user to store all attributes so that they can use them in the user-defined functions
-        segments['node'] = segments.apply(axis=1, func= lambda row: \
+        segments['node'] = segments.apply(axis=1, func=lambda row:
                 Segment(index=row.name, speaker=row['speaker_type'],
                         onset=row['segment_onset'], offset=row['segment_offset']))
 
         # For each nodes, get connected nodes
         segments['connected_nodes'] = segments.apply(axis=1,
-                func= lambda t_row: segments[
+                func=lambda t_row: segments[
                     segments.apply(axis=1,
                                       # Get overlapping segments
                         func=lambda c_row: (overlaps(c_row['segment_onset'], c_row['segment_offset'],
                                                 t_row['segment_onset'], t_row['segment_offset'] + self.allowed_gap))
-                                      and c_row['segment_onset'] >= t_row['segment_onset'] # only look after
+                                      and c_row['segment_onset'] >= t_row['segment_onset']  # only look after
                                       # Remove identical segments
                                       and t_row.name != c_row.name)
                 ])
@@ -274,7 +233,7 @@ class Conversation(object):
             # Target    |            |----------|
             # Candidate |               |---Keep---| |--Remove--|
             segments['connected_nodes'] = segments['connected_nodes'].apply(
-                func = lambda df: (df.groupby('speaker_type')
+                func=lambda df: (df.groupby('speaker_type')
                                 # Keep only the first segment for each candidate speaker
                                 .apply(lambda rows: (rows.sort_values(by='segment_onset', ascending=True)
                                                     .head(n=1)))
@@ -312,7 +271,6 @@ class Conversation(object):
         segments = self._segments_to_nodes(segments)
         interaction_graph = self._segments_to_graph(segments)
 
-
         connected_components = interaction_graph.get_connected_components(**self._kwargs)
 
         if self.best_path_selection_rules:
@@ -330,4 +288,4 @@ class Conversation(object):
         if self.filtering_rules:
             final_interactional_chains = self.filtering_rules(final_interactional_chains, **self._kwargs)
 
-        return InteractionalSequences(data = data, interactional_sequences = final_interactional_chains, **self._kwargs)
+        return InteractionalSequences(data=data, interactional_sequences=final_interactional_chains)
