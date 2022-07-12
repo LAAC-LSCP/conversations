@@ -26,7 +26,7 @@ from .graph_visualisation import generate_interactional_sequence_visualisation
 
 
 class Segment(Node):
-    def __init__(self, index, speaker, onset, offset):
+    def __init__(self, index, speaker, onset, offset, **kwargs):
         self._index = index
         self._speaker = speaker
         self._onset = onset
@@ -45,12 +45,12 @@ class Segment(Node):
         return self._onset
 
     @property
-    def duration(self):
-        return self.offset - self.onset
-
-    @property
     def offset(self):
         return self._offset
+
+    @property
+    def duration(self):
+        return self.offset - self.onset
 
     def __str__(self):
         return str(self.index)
@@ -60,7 +60,6 @@ class Segment(Node):
                                                                 self.index, self.speaker,
                                                                 self.onset, self.offset, hex(id(self)))
 
-
 class InteractionalSequence(object):
 
     def __init__(self, interactional_sequence: DirectedGraph, stat_rules: Optional[Callable] = None):
@@ -69,12 +68,13 @@ class InteractionalSequence(object):
         self._interactional_sequence = interactional_sequence
         self._stats_rules = stat_rules
 
-    def stats(self) -> dict:
-        statistics = self._interactional_sequence.stats()
+    @property
+    def statistics(self) -> dict:
+        statistics = self._interactional_sequence.statistics
 
         if self._stats_rules:
             edges = list(self._interactional_sequence)
-            statistics = self._stats_rules(statistics, edges)
+            statistics = self._stats_rules(statistics=statistics, edges=edges)
 
         return statistics
 
