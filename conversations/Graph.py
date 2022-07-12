@@ -80,7 +80,8 @@ class DirectedGraph(Graph):
         self.adjacency.setdefault(node2, set())
         self.adjacency[node1].add(node2)
 
-    def stats(self) -> dict:
+    @property
+    def statistics(self) -> dict:
         return {'num_edges': self.num_edges,
                 'num_nodes': self.num_nodes}
 
@@ -161,7 +162,6 @@ class DirectedGraph(Graph):
                 if connected_node == set(): continue
 
                 visited_pairs.add(node_pair)
-                print(candidate_node, connected_node)
                 if self._apply_transition_rules(candidate_node, connected_node, **kwargs):
                     transition.append(node_pair)
                     connected_nodes = self.adjacency[connected_node]
@@ -211,6 +211,7 @@ class DirectedGraph(Graph):
         """
         paths = []
         queue = [[[start_node], set([start_node])]]
+        #TODO: stop exploration at some point ...
 
         while queue:
             (tmp_path, node_set) = queue.pop()
@@ -262,3 +263,9 @@ class DirectedGraph(Graph):
             for output_node in self.adjacency[input_node]:
                 yield input_node, output_node
         return
+
+    def __neg__(self):
+        edges = list(self)
+        reversed_edges = [(b,a) for (a, b) in edges]
+
+        return DirectedGraph.from_tuple_list(reversed_edges)
