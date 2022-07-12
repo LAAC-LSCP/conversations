@@ -258,7 +258,7 @@ class Conversation(object):
 
         return interaction_graph
 
-    def get_interational_sequences(self, data):
+    def get_interactional_sequences(self, data):
 
         segments = data
         segments.index.name = 'index'
