@@ -21,10 +21,7 @@
 from .Graph import DirectedGraph
 from .Interactions import InteractionalSequence, Segment
 from .utils import flatten, overlaps
-from .defaults import default_turn_transition_rules, default_filtering_rules, default_statistics
 
-import os
-from itertools import chain
 from typing import List, Union, Callable, Optional
 
 import pandas as pd
@@ -46,9 +43,10 @@ class InteractionalSequences(object):
     def to_dataframe(self):
         segments = self._data
         # Label interactional sequence and turns
-        # print(interactional_seqs)
         flattened_interactional_sequences = list(map(lambda it: sorted([item.index for item in set(flatten(it))]),
                                                      self.interactional_sequences))
+
+        # TODO: Handle possible disconnected sequences labelling here
         for index_is, interactional_sequence in enumerate(flattened_interactional_sequences, 1):
             segments.loc[interactional_sequence, 'inter_seq_index'] = index_is
             segments.loc[interactional_sequence, 'conv_turn_index'] = range(1, len(interactional_sequence) + 1)
@@ -66,8 +64,8 @@ class InteractionalSequences(object):
         return self._interactional_sequences[index]
 
     def __iter__(self) -> InteractionalSequence:
-        for interacational_sequence in self._interactional_sequences:
-            yield interacational_sequence
+        for interactional_sequence in self._interactional_sequences:
+            yield interactional_sequence
         return
 
     def __len__(self):
@@ -82,7 +80,8 @@ class InteractionalSequences(object):
 
 class Conversation(object):
 
-    def __init__(self,  # Segment connectivity
+    def __init__(self,  segment_type = Segment,
+                        # Segment connectivity
                         allowed_gap: int = 1000, allowed_overlap: int = 0,
                         allow_segment_jump: bool = False,
                         # Filtering
@@ -91,9 +90,9 @@ class Conversation(object):
                         # Transitions and filtering rules
                         turn_transition_rules: Optional[Callable] = None,
                         best_path_selection_rules: Optional[Callable] = None,
-                        graph_statistics: Optional[Callable] = default_statistics,
+                        graph_statistics: Optional[Callable] = None,
                         filtering_rules: Optional[Callable] = None,
-                        **kwargs,
+                        **kwargs, # Used to pass arguments to user-defined functions
                  ):
 
         if allowed_overlap: raise NotImplementedError
@@ -112,6 +111,8 @@ class Conversation(object):
             assert lx_col and type(lx_only) != str, \
                 ValueError('Specify which column should be used to assert linguitic type using lx_col parameter.')
 
+        self.segment_type =  segment_type
+
         # Segment connectivity
         self._allowed_gap = allowed_gap
         self._allowed_overlap = allowed_overlap
@@ -129,7 +130,7 @@ class Conversation(object):
         self._graph_statistics = graph_statistics
         self._best_path_selection_rules = best_path_selection_rules
 
-        self._kwargs = kwargs
+        self._kwargs = kwargs # stores arguments to user-defined functions
     
     @property
     def allowed_gap(self):
@@ -181,6 +182,7 @@ class Conversation(object):
     @classmethod
     def from_csv(cls, filepath):
         # TODO: add assertion to make sure we have the fields we need
+        # TODO: for CLI interface, allow user to drop lines based on condition
         return pd.read_csv(filepath)
 
     @classmethod
@@ -213,8 +215,8 @@ class Conversation(object):
         # Build node for each segment
         # TODO: allow user to store all attributes so that they can use them in the user-defined functions
         segments['node'] = segments.apply(axis=1, func=lambda row:
-                Segment(index=row.name, speaker=row['speaker_type'],
-                        onset=row['segment_onset'], offset=row['segment_offset']))
+                self.segment_type(index=row.name, speaker=row['speaker_type'],
+                                  onset=row['segment_onset'], offset=row['segment_offset'], **row))
 
         # For each nodes, get connected nodes
         segments['connected_nodes'] = segments.apply(axis=1,
@@ -255,7 +257,6 @@ class Conversation(object):
             for item in row['connected_nodes']:
                 connected_node = segments.loc[item]['node']
                 interaction_graph.add_edge(parent, connected_node)
-
         return interaction_graph
 
     def get_interactional_sequences(self, data):
@@ -271,20 +272,26 @@ class Conversation(object):
         segments = self._segments_to_nodes(segments)
         interaction_graph = self._segments_to_graph(segments)
 
+        # Find interactional sequences
         connected_components = interaction_graph.get_connected_components(**self._kwargs)
 
+        # Select best path
         if self.best_path_selection_rules:
+            # Find on path for each connected component
             final_interactional_chains = []
             for connected_component in connected_components:
-                pprint(connected_component)
                 connected_component_paths = [InteractionalSequence(p, stat_rules=self.graph_statistics)
                                              for p in connected_component.get_all_paths()]
-                connected_component_best_path = self.best_path_selection_rules(connected_component_paths)
+                connected_component_best_path = self.best_path_selection_rules(connected_component_paths,
+                                                                               **self._kwargs)
+
                 final_interactional_chains.append(connected_component_best_path)
         else:
-            final_interactional_chains = [InteractionalSequence(p, stat_rules=self.graph_statistics)
+            # Each connected component is the final interactional sequence
+            final_interactional_chains = [InteractionalSequence(p, self.graph_statistics)
                                           for p in connected_components]
 
+        # Filter out sequences
         if self.filtering_rules:
             final_interactional_chains = self.filtering_rules(final_interactional_chains, **self._kwargs)
 
