@@ -19,7 +19,7 @@
 # -----------------------------------------------------------------------------
 
 import abc
-from itertools import repeat
+from itertools import chain, repeat
 from typing import Callable, List, Tuple, Set, Dict, Optional
 
 from .utils import pairwise
@@ -144,7 +144,7 @@ class DirectedGraph(Graph):
         """
         chain_sequences = []
 
-        visited_pairs = set()
+        visited_pairs = set() # move line down
         for node in self.adjacency.keys():
             candidate_node = node
             connected_nodes = self.adjacency[candidate_node]
@@ -161,7 +161,7 @@ class DirectedGraph(Graph):
                 if connected_node == set(): continue
 
                 visited_pairs.add(node_pair)
-
+                print(candidate_node, connected_node)
                 if self._apply_transition_rules(candidate_node, connected_node, **kwargs):
                     transition.append(node_pair)
                     connected_nodes = self.adjacency[connected_node]
@@ -170,7 +170,25 @@ class DirectedGraph(Graph):
                     next_nodes_to_visit.extend(next_node_pairs)
 
             if transition:
-                chain_sequences.append(DirectedGraph.from_tuple_list(transition))
+                chain_sequences.append(transition)
+
+        # Some components might still be disconnected when they shouldn't. If so, merge them.
+        # This situation happens when one start node is connected to a node that already belongs to another chain
+        to_skip = set()
+        for i_t1 in range(len(chain_sequences)):
+            if i_t1 in to_skip: continue
+            t1_flat = set(chain(*chain_sequences[i_t1]))
+            for i_t2 in range(i_t1 + 1, len(chain_sequences)):
+                t2_flat = set(chain(*chain_sequences[i_t2]))
+
+                # Two chains are connected if their share one node
+                if len(t1_flat.intersection(t2_flat)):
+                    chain_sequences[i_t1] = chain_sequences[i_t1] + chain_sequences[i_t2]
+                    to_skip.add(i_t2)
+
+        # Transform chain sequences to graph
+        chain_sequences = [DirectedGraph.from_tuple_list(item)
+                           for idx, item in enumerate(chain_sequences) if idx not in to_skip]
 
         return chain_sequences
 
@@ -192,21 +210,23 @@ class DirectedGraph(Graph):
         :rtype:  List['DirectedGraph']
         """
         paths = []
+        queue = [[[start_node], set([start_node])]]
 
-        queue = [[start_node]]
         while queue:
-            tmp_path = queue.pop()
+            (tmp_path, node_set) = queue.pop()
             last_node = tmp_path[-1]
 
             if last_node == end_node:
-                paths.append(tmp_path.copy())
+                paths.append(DirectedGraph.from_tuple_list(pairwise(tmp_path)))
 
             for link_node in self.adjacency[last_node]:
-                if link_node not in tmp_path:
-                    new_path = tmp_path + [link_node]
+                if link_node not in node_set:
+                    set_update = node_set.copy()
+                    set_update.add(link_node)
+
+                    new_path = [tmp_path + [link_node], set_update]
                     queue.append(new_path)
 
-        paths = [DirectedGraph.from_tuple_list(pairwise(path)) for path in paths]
         return paths
 
     def _apply_transition_rules(self, candidate_node: Node, connected_node: Node, **kwargs: dict) -> bool:
@@ -230,7 +250,7 @@ class DirectedGraph(Graph):
         :rtype: None
         """
         for key in self.adjacency.keys():
-            print("{} {} -> {}".format(type(key), str(key), map(str, self.adjacency[key])))
+            print("{} {} -> {}".format(type(key), str(key), list(map(str, self.adjacency[key]))))
 
     def __iter__(self) -> Optional[Tuple[Node, Node]]:
         """
