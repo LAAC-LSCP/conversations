@@ -73,8 +73,8 @@ class InteractionalSequences(object):
     def __len__(self):
         return len(self._interactional_sequences)
 
-    def to_csv(self):
-        raise NotImplementedError
+    def to_csv(self, filepath):
+        self.to_dataframe().to_csv(filepath)
 
     def to_chattr(self):
         raise NotImplementedError
