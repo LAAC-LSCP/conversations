@@ -21,11 +21,11 @@
 import os
 from typing import Callable, Optional
 
-from .Graph import DirectedGraph, Node
+from .Graph import DirectedGraph, Node, Cost
 from .graph_visualisation import generate_interactional_sequence_visualisation
 
 
-class PathCost(object):
+class PathCost(Cost):
     def __init__(self, segment):
         self._ancestor = segment
         self._speakers = [segment.speaker]
@@ -51,7 +51,7 @@ class PathCost(object):
     def ancestor(self):
         return self._ancestor
 
-    def __add__(self, other):
+    def __add__(self, other: Node):
         assert isinstance(other, Node), ValueError('Can only add Node (or inherited) to PathCost!')
 
         # Create fresh copy
@@ -116,36 +116,43 @@ class Segment(Node):
                                                                 self.onset, self.offset, hex(id(self)))
 
 class InteractionalSequence(object):
-
+    # store best path (if it exists) and return that one by default
     def __init__(self, interactional_sequence: DirectedGraph, stat_rules: Optional[Callable] = None):
         super().__init__()
 
         self._interactional_sequence = interactional_sequence
         self._stats_rules = stat_rules
+        self._best_path = None
 
     @property
     def statistics(self) -> dict:
-        statistics = self._interactional_sequence.statistics
+        statistics = self._best_path.statistics if self._best_path else self._interactional_sequence.statistics
 
         if self._stats_rules:
-            edges = list(self._interactional_sequence)
+            edges = list(self)
             statistics = self._stats_rules(statistics=statistics, edges=edges)
-
         return statistics
 
-    def source(self):
+    def source(self, raw_with_best_path=True):
         graph = self._to_graph_viz()
         return graph.source
 
-    def render(self, dirpath, name, format, remove_gv=False):
+    def render(self, dirpath, name, format, raw_with_best_path=True, delete_gv=False):
         full_filepath = os.path.join(dirpath, '{}.gv'.format(name))
         graph = self._to_graph_viz()
         graph.render(filename=full_filepath, format=format)
-        if remove_gv:
+        if delete_gv:
             os.remove(full_filepath)
 
-    def _to_graph_viz(self):
-        return generate_interactional_sequence_visualisation(self._interactional_sequence)
+    def _to_graph_viz(self, raw_with_best_path=True):
+        if raw_with_best_path:
+            return generate_interactional_sequence_visualisation(list(self._interactional_sequence),
+                                                                 highlight_edges= list(self._best_path))
+        else:
+            return generate_interactional_sequence_visualisation(list(self))
 
     def __iter__(self):
-        return iter(self._interactional_sequence)
+        if self._best_path:
+            return iter(self._best_path)
+        else:
+            return iter(self._interactional_sequence)

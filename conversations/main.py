@@ -64,7 +64,8 @@ def main():
             # And plot a graph representing the interactional sequence!
             interactional_sequence.render(dirpath="/scratch2/whavard/TEMP",
                                           name="{}_{}".format(file, idx),
-                                          format='png')
+                                          format='png',
+                                          raw_with_best_path=True)
 
         interactional_sequences.to_csv('/scratch2/whavard/TEMP/{}_interactional_sequences.csv'.format(file))
 

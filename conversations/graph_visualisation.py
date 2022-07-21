@@ -109,12 +109,14 @@ def _segment_subgraphs(actors_name_segments, start_nodes, end_nodes):
     return graphs
 
 
-def _turn_subgraph(interactional_sequence, label_edges=False):
+def _turn_subgraph(interactional_sequence, label_edges=False, highlight_edges=[]):
     prompt_response_subgraph = graphviz.Digraph()
     # Add prompt/response edges
     for prompt, response in interactional_sequence:
+        color = 'black' if (prompt, response) not in highlight_edges else 'red'
+        penwidth = "1" if (prompt, response) not in highlight_edges else "4"
         label = str((response.onset - prompt.offset)/1000) if label_edges else ''
-        prompt_response_subgraph.edge(str(prompt), str(response), label=label)
+        prompt_response_subgraph.edge(str(prompt), str(response), label=label, color=color, penwidth=penwidth)
 
     return prompt_response_subgraph
 
@@ -139,7 +141,8 @@ def _timeline_alignment_subgraphs(segment_onsets, actor_names):
     return graphs
 
 
-def generate_interactional_sequence_visualisation(interactional_sequence, label_edges=False):
+def generate_interactional_sequence_visualisation(interactional_sequence, label_edges=False, highlight_edges = []):
+    print(highlight_edges)
     # Sort segments by onset
     sorted_interaction_sequence_turns = sorted(interactional_sequence, key=lambda tup: tup[0].onset)
     prompts, responses = zip(*sorted_interaction_sequence_turns)
@@ -163,7 +166,7 @@ def generate_interactional_sequence_visualisation(interactional_sequence, label_
 
     graph.subgraph(actor_subgraph)
     graph.subgraph(timeline_subgraph)
-    turn_subgraph = _turn_subgraph(interactional_sequence, label_edges=label_edges)
+    turn_subgraph = _turn_subgraph(interactional_sequence, label_edges=label_edges, highlight_edges=highlight_edges)
 
     for segment_subgraph in segment_subgraphs:
         graph.subgraph(segment_subgraph)

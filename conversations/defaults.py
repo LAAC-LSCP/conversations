@@ -63,7 +63,7 @@ def default_filtering_rules(chain_sequences, target_participant, **kwargs):
 
 
 def default_path_selection_rules(path_list, **kwargs):
-    return sorted(path_list, reverse=True, key=attrgetter('num_segments', 'duration'))[0]
+    return sorted(path_list, reverse=True, key=attrgetter('num_turns'))[0]
 
 
 def default_statistics(statistics, edges):

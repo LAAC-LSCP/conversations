@@ -20,7 +20,7 @@
 
 from .Graph import DirectedGraph
 from .Interactions import InteractionalSequence, Segment, PathCost
-from .utils import flatten, overlaps
+from .utils import flatten, overlaps, pairwise
 from .defaults import default_path_selection_rules
 
 from typing import List, Union, Callable, Optional
@@ -278,47 +278,41 @@ class Conversation(object):
         connected_components = interaction_graph.get_connected_components(**self._kwargs)
 
         # Select best path
+        #
+        # start_nodes = interaction_graph.start_nodes
+        # for start_node in start_nodes:
+        #     interaction_graph.compute_path_cost(PathCost, start_node, default_path_selection_rules)
+        #     interaction_graph.compute_path_cost(PathCost, start_node, default_path_selection_rules)
+        # pprint(interaction_graph.adjacency)
+        # best_path = []
+        # # select best end node
+        # path_cost_temp = {}
+        # for end_node in interaction_graph.end_nodes:
+        #     #print(end_node)
+        #     for ancestor_node, (path_cost, node_to_visit) in interaction_graph.adjacency[end_node]['prev'].items():
+        #         #print(ancestor_node, path_cost, node_to_visit)
+        #         path_cost_temp[path_cost] = (end_node, node_to_visit)
+        # best_end_node = default_path_selection_rules(path_cost_temp.keys())
+        # print(path_cost_temp[best_end_node])
+        # best_path.extend(path_cost_temp[best_end_node])
+        # ancestor = best_end_node.ancestor
+        #
+        # while interaction_graph.adjacency[best_path[-1]]['prev']:
+        #     best_path.append(interaction_graph.adjacency[best_path[-1]]['prev'][ancestor][-1])
+        #
+        # print(list(reversed(best_path)))
+        # # now go backwards
+        # exit()
 
-        start_nodes = interaction_graph.start_nodes
-        for start_node in start_nodes:
-            interaction_graph.compute_path_cost(PathCost, start_node, default_path_selection_rules)
-        pprint(interaction_graph.adjacency)
-        best_path = []
-        # select best end node
-        path_cost_temp = {}
-        for end_node in interaction_graph.end_nodes:
-            #print(end_node)
-            for ancestor_node, (path_cost, node_to_visit) in interaction_graph.adjacency[end_node]['prev'].items():
-                #print(ancestor_node, path_cost, node_to_visit)
-                path_cost_temp[path_cost] = (end_node, node_to_visit)
-        best_end_node = default_path_selection_rules(path_cost_temp.keys())
-        print(path_cost_temp[best_end_node])
-        best_path.extend(path_cost_temp[best_end_node])
-        ancestor = best_end_node.ancestor
+        interactional_sequences = [InteractionalSequence(p, self.graph_statistics)
+                                   for p in connected_components]
 
-        while interaction_graph.adjacency[best_path[-1]]['prev']:
-            best_path.append(interaction_graph.adjacency[best_path[-1]]['prev'][ancestor][-1])
-
-        print(list(reversed(best_path)))
-        # now go backwards
-        exit()
         if self.best_path_selection_rules:
-            # Find on path for each connected component
-            final_interactional_chains = []
-            for connected_component in connected_components:
-                connected_component_paths = [InteractionalSequence(p, stat_rules=self.graph_statistics)
-                                             for p in connected_component.get_all_paths()]
-                connected_component_best_path = self.best_path_selection_rules(connected_component_paths,
-                                                                               **self._kwargs)
-
-                final_interactional_chains.append(connected_component_best_path)
-        else:
-            # Each connected component is the final interactional sequence
-            final_interactional_chains = [InteractionalSequence(p, self.graph_statistics)
-                                          for p in connected_components]
-
+            for interactional_sequence in interactional_sequences:
+                interactional_sequence._best_path = \
+                    DirectedGraph.from_tuple_list(pairwise(interactional_sequence._interactional_sequence.best_path(PathCost, self.best_path_selection_rules)))
         # Filter out sequences
         if self.filtering_rules:
-            final_interactional_chains = self.filtering_rules(final_interactional_chains, **self._kwargs)
+            interactional_sequences = self.filtering_rules(interactional_sequences, **self._kwargs)
 
-        return InteractionalSequences(data=data, interactional_sequences=final_interactional_chains)
+        return InteractionalSequences(data=data, interactional_sequences=interactional_sequences)
