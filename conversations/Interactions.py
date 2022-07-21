@@ -25,6 +25,61 @@ from .Graph import DirectedGraph, Node
 from .graph_visualisation import generate_interactional_sequence_visualisation
 
 
+class PathCost(object):
+    def __init__(self, segment):
+        self._ancestor = segment
+        self._speakers = [segment.speaker]
+        self._duration = segment.duration
+
+    @property
+    def num_speakers(self):
+        return len(set(self._speakers))
+
+    @property
+    def num_segments(self):
+        return len(self._speakers)
+
+    @property
+    def num_turns(self):
+        return self.num_segments - 1
+
+    @property
+    def duration(self):
+        return self._duration
+
+    @property
+    def ancestor(self):
+        return self._ancestor
+
+    def __add__(self, other):
+        assert isinstance(other, Node), ValueError('Can only add Node (or inherited) to PathCost!')
+
+        # Create fresh copy
+        new_cost = PathCost(self._ancestor)
+        # Copy old information
+        new_cost._speakers = self._speakers.copy()
+        new_cost._duration = self._duration
+
+        # Add segment information
+        new_cost._speakers.append(other.speaker)
+        new_cost._duration += other.duration
+
+        return new_cost
+
+    def __repr__(self):
+        return '<{}: \
+                    \n\tancestor: {}\
+                    \n\tnum_segments: {}\
+                    \n\tnum_turns: {}\
+                    \n\tnum_speakers: {}\
+                    \n\tduration: {} at {}>'.format(type(self).__name__,
+                                             self.ancestor,
+                                             self.num_segments,
+                                             self.num_turns,
+                                             self.num_speakers,
+                                             self.duration, hex(id(self)))
+
+
 class Segment(Node):
     def __init__(self, index, speaker, onset, offset, **kwargs):
         self._index = index

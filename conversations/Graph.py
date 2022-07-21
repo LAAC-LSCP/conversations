@@ -76,9 +76,16 @@ class DirectedGraph(Graph):
         :return: None
         :rtype: None
         """
-        self.adjacency.setdefault(node1, set())
-        self.adjacency.setdefault(node2, set())
-        self.adjacency[node1].add(node2)
+        self.adjacency.setdefault(node1, dict()) # change to dict to be able to weight edges
+        self.adjacency.setdefault(node2, dict())
+
+        self.adjacency[node1].setdefault('prev', dict())
+        self.adjacency[node1].setdefault('next', list())
+        self.adjacency[node2].setdefault('prev', dict())
+        self.adjacency[node2].setdefault('next', list())
+
+        self.adjacency[node1]['next'].append(node2)
+        #self.adjacency[node2]['prev'][node1] = {}  # Will be used to store path costs
 
     @property
     def statistics(self) -> dict:
@@ -87,7 +94,7 @@ class DirectedGraph(Graph):
 
     @property
     def num_edges(self) -> int:
-        return sum(map(len, self.adjacency.values()))
+        return len(list(self))
 
     @property
     def num_nodes(self) -> int:
@@ -145,10 +152,10 @@ class DirectedGraph(Graph):
         """
         chain_sequences = []
 
-        visited_pairs = set() # move line down
+        visited_pairs = set()
         for node in self.adjacency.keys():
             candidate_node = node
-            connected_nodes = self.adjacency[candidate_node]
+            connected_nodes = self.adjacency[candidate_node]['next']
 
             next_node_pairs = list(zip(repeat(candidate_node, len(connected_nodes)), connected_nodes))
             next_nodes_to_visit = next_node_pairs
@@ -159,12 +166,12 @@ class DirectedGraph(Graph):
                 candidate_node, connected_node = node_pair
 
                 if node_pair in visited_pairs: continue
-                if connected_node == set(): continue
-
                 visited_pairs.add(node_pair)
+                if not connected_node: continue
+
                 if self._apply_transition_rules(candidate_node, connected_node, **kwargs):
                     transition.append(node_pair)
-                    connected_nodes = self.adjacency[connected_node]
+                    connected_nodes = self.adjacency[connected_node]['next']
                     candidate_node = connected_node
                     next_node_pairs = list(zip(repeat(candidate_node, len(connected_nodes)), connected_nodes))
                     next_nodes_to_visit.extend(next_node_pairs)
@@ -211,7 +218,6 @@ class DirectedGraph(Graph):
         """
         paths = []
         queue = [[[start_node], set([start_node])]]
-        #TODO: stop exploration at some point ...
 
         while queue:
             (tmp_path, node_set) = queue.pop()
@@ -220,7 +226,7 @@ class DirectedGraph(Graph):
             if last_node == end_node:
                 paths.append(DirectedGraph.from_tuple_list(pairwise(tmp_path)))
 
-            for link_node in self.adjacency[last_node]:
+            for link_node in self.adjacency[last_node]['next']:
                 if link_node not in node_set:
                     set_update = node_set.copy()
                     set_update.add(link_node)
@@ -229,6 +235,61 @@ class DirectedGraph(Graph):
                     queue.append(new_path)
 
         return paths
+
+    def compute_path_cost(self, cost_counter, start_node, compare):
+        # Remember which nodes we visited
+        visited_pairs = set()
+
+        # Initialise cost_counter from the specified starting node
+        node_pair_cost = cost_counter(start_node)
+
+        # Get connected nodes
+        incoming_node = start_node
+        outgoing_nodes = self.adjacency[incoming_node]['next']
+
+        # For each of the connected nodes, add it to the current cost_counter
+        next_node_pairs = []
+        for outgoing_node in outgoing_nodes:
+            outgoing_node_cost = node_pair_cost + outgoing_node
+
+            # Add cost (or swap)
+            current_path_cost, _ = self.adjacency[outgoing_node]['prev'].setdefault(outgoing_node_cost.ancestor, (outgoing_node_cost, incoming_node))
+            current_path_cost = compare([current_path_cost, outgoing_node_cost])
+            self.adjacency[outgoing_node]['prev'][outgoing_node_cost.ancestor] = (current_path_cost, incoming_node)
+
+            next_node_pairs.append((incoming_node, outgoing_node))
+        next_nodes_to_visit = next_node_pairs
+
+        # For the next node pair to visit
+        while next_nodes_to_visit:
+            # Get pair and continue or skip
+            node_pair = next_nodes_to_visit.pop(0)  # /!\ important to pop the first item and not the last
+                                                    #     so as not do go in depth but in breadth!
+            incoming_node, outgoing_node = node_pair
+            if node_pair in visited_pairs: continue
+
+            # Mark visited
+            visited_pairs.add(node_pair)
+
+            # Get costs
+            previous_costs = self.adjacency[outgoing_node]['prev'].values()
+
+            # Get outgoing nodes from the outgoing node
+            outgoing_nodes = self.adjacency[outgoing_node]['next']
+
+            incoming_node = outgoing_node
+            next_node_pairs = []
+            for outgoing_node in outgoing_nodes:
+                next_node_pairs.append((incoming_node, outgoing_node))
+                for (previous_cost, _) in previous_costs:
+                    outgoing_node_cost = previous_cost + outgoing_node
+
+                    prev_path_cost, prev_path_incoming = self.adjacency[outgoing_node]['prev'].setdefault(outgoing_node_cost.ancestor,
+                                                                                         (None, None))
+                    current_path_cost = compare([prev_path_cost, outgoing_node_cost]) if prev_path_cost else outgoing_node_cost
+                    #print(incoming_node, outgoing_node, (outgoing_node_cost, incoming_node), (prev_path_cost, prev_path_incoming), current_path_cost)
+                    self.adjacency[outgoing_node]['prev'][outgoing_node_cost.ancestor] = (current_path_cost, prev_path_incoming if current_path_cost == prev_path_cost else incoming_node)
+            next_nodes_to_visit.extend(next_node_pairs)
 
     def _apply_transition_rules(self, candidate_node: Node, connected_node: Node, **kwargs: dict) -> bool:
         """
@@ -251,7 +312,7 @@ class DirectedGraph(Graph):
         :rtype: None
         """
         for key in self.adjacency.keys():
-            print("{} {} -> {}".format(type(key), str(key), list(map(str, self.adjacency[key]))))
+            print("{} {} -> {}".format(type(key), str(key), list(map(str, self.adjacency[key]['next']))))
 
     def __iter__(self) -> Optional[Tuple[Node, Node]]:
         """
@@ -260,7 +321,7 @@ class DirectedGraph(Graph):
         :rtype: Optional[Tuple[Node, Node]]
         """
         for input_node in self.adjacency:
-            for output_node in self.adjacency[input_node]:
+            for output_node in self.adjacency[input_node]['next']:
                 yield input_node, output_node
         return
 

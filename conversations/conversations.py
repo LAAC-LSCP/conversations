@@ -19,8 +19,9 @@
 # -----------------------------------------------------------------------------
 
 from .Graph import DirectedGraph
-from .Interactions import InteractionalSequence, Segment
+from .Interactions import InteractionalSequence, Segment, PathCost
 from .utils import flatten, overlaps
+from .defaults import default_path_selection_rules
 
 from typing import List, Union, Callable, Optional
 
@@ -225,7 +226,8 @@ class Conversation(object):
                                       # Get overlapping segments
                         func=lambda c_row: (overlaps(c_row['segment_onset'], c_row['segment_offset'],
                                                 t_row['segment_onset'], t_row['segment_offset'] + self.allowed_gap))
-                                      and c_row['segment_onset'] >= t_row['segment_onset']  # only look after
+                                      # only look after. /!\ only use > and not >= as it might create cycles
+                                      and c_row['segment_onset'] > t_row['segment_onset']
                                       # Remove identical segments
                                       and t_row.name != c_row.name)
                 ])
@@ -264,7 +266,7 @@ class Conversation(object):
         segments = data
         segments.index.name = 'index'
 
-        #   FILTERING
+        # FILTERING
         segments = self._filter_duration(segments)
         segments = self._filter_lx(segments)
 
@@ -276,6 +278,30 @@ class Conversation(object):
         connected_components = interaction_graph.get_connected_components(**self._kwargs)
 
         # Select best path
+
+        start_nodes = interaction_graph.start_nodes
+        for start_node in start_nodes:
+            interaction_graph.compute_path_cost(PathCost, start_node, default_path_selection_rules)
+        pprint(interaction_graph.adjacency)
+        best_path = []
+        # select best end node
+        path_cost_temp = {}
+        for end_node in interaction_graph.end_nodes:
+            #print(end_node)
+            for ancestor_node, (path_cost, node_to_visit) in interaction_graph.adjacency[end_node]['prev'].items():
+                #print(ancestor_node, path_cost, node_to_visit)
+                path_cost_temp[path_cost] = (end_node, node_to_visit)
+        best_end_node = default_path_selection_rules(path_cost_temp.keys())
+        print(path_cost_temp[best_end_node])
+        best_path.extend(path_cost_temp[best_end_node])
+        ancestor = best_end_node.ancestor
+
+        while interaction_graph.adjacency[best_path[-1]]['prev']:
+            best_path.append(interaction_graph.adjacency[best_path[-1]]['prev'][ancestor][-1])
+
+        print(list(reversed(best_path)))
+        # now go backwards
+        exit()
         if self.best_path_selection_rules:
             # Find on path for each connected component
             final_interactional_chains = []

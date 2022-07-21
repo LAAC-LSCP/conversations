@@ -20,6 +20,7 @@
 
 
 from itertools import chain
+from operator import attrgetter
 from .utils import flatten
 
 
@@ -61,13 +62,8 @@ def default_filtering_rules(chain_sequences, target_participant, **kwargs):
     return chain_sequences
 
 
-def default_path_selection_rules(list_of_path, **kwargs):
-    sorted_path = sorted(list_of_path,
-                         key=lambda path: path.statistics['num_turns'],
-                         reverse=True)
-    best_path = sorted_path[0]
-
-    return best_path
+def default_path_selection_rules(path_list, **kwargs):
+    return sorted(path_list, reverse=True, key=attrgetter('num_segments', 'duration'))[0]
 
 
 def default_statistics(statistics, edges):
