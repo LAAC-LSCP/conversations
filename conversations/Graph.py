@@ -26,27 +26,36 @@ from .utils import pairwise
 
 
 class Node(abc.ABC):
-
+    """
+    Abstract class used for a Node in graph
+    """
     @abc.abstractmethod
     def __init__(self):
         pass
 
 
 class Cost(abc.ABC):
+    """
+    Abstract class used to compute costs in a graph
+    """
     @abc.abstractmethod
     def __add__(self, other: Node):
         pass
 
 
 class Graph(abc.ABC):
-
+    """
+    Abstract class for a graph
+    """
     @abc.abstractmethod
     def __init__(self):
         pass
 
 
 class DirectedGraph(Graph):
-
+    """
+    Directed graph
+    """
     def __init__(self, transition_rules: Optional[Callable] = None) -> None:
         # Stores nodes and edges
         self.adjacency = dict()
@@ -82,28 +91,29 @@ class DirectedGraph(Graph):
         :return: None
         :rtype: None
         """
-        self.adjacency.setdefault(node1, dict()) # change to dict to be able to weight edges
-        self.adjacency.setdefault(node2, dict())
 
-        self.adjacency[node1].setdefault('cost', dict())
-        self.adjacency[node1].setdefault('next', list())
-        self.adjacency[node2].setdefault('cost', dict())
-        self.adjacency[node2].setdefault('next', list())
-
+        for node in [node1, node2]:
+            self.adjacency.setdefault(node, dict())
+            self.adjacency[node].setdefault('cost', dict())
+            self.adjacency[node].setdefault('next', list())
         self.adjacency[node1]['next'].append(node2)
-        #self.adjacency[node2]['cost'][node1] = {}  # Will be used to store path costs
-
-    @property
-    def statistics(self) -> dict:
-        return {'num_edges': self.num_edges,
-                'num_nodes': self.num_nodes}
 
     @property
     def num_edges(self) -> int:
+        """
+        Returns the number of edges in the graph
+        :return: number of edges in the graph
+        :rtype: int
+        """
         return len(list(self))
 
     @property
     def num_nodes(self) -> int:
+        """
+        Returns the number of nodes in the graph
+        :return: number of nodes in the graph
+        :rtype: int
+        """
         return len(self.adjacency.keys())
 
     @property
@@ -150,7 +160,9 @@ class DirectedGraph(Graph):
 
     def get_connected_components(self, **kwargs: Dict) -> List[Graph]:
         """
-
+        Returns the connected components of the graph. If no transition rules are specified, then any two nodes that
+        are linked by an edge will be considered connected. If transition rules were specified by the user, then
+        two nodes might be considered disconnected even though an edge originally linked the two.
         :param kwargs: dictionary of attributes/values
         :type kwargs: dict
         :return: list of connected components as DirectedGraph
@@ -206,6 +218,12 @@ class DirectedGraph(Graph):
         return chain_sequences
 
     def get_all_paths(self):
+        """
+        Returns all the path in the graph
+        /!\ the number of paths in the graph grows exponentially with the number of nodes and edges
+        :return: list of edges of all the paths found
+        :rtype: list
+        """
         paths = []
         for start_node in self.start_nodes:
             for end_node in self.end_nodes:
@@ -242,29 +260,27 @@ class DirectedGraph(Graph):
 
         return paths
 
-    def _compute_cost(self, start_node, cost_counter, compare):
+    def _compute_cost(self, start_node, cost_counter, selection_rule, **kwargs) -> None:
+        """
+        Assign a cost to each of the edges of the graph starting from start_node until all leaves accessible from this
+        node are reached.
+        :param start_node:
+        :type start_node:
+        :param cost_counter: object containing the cost of transitioning from one node to another
+        :type cost_counter: Cost
+        :param selection_rule: function used to decide which of two cost is the best
+        :type selection_rule: Callable
+        :param kwargs: dictionary of attributes/values
+        :type kwargs: dict
+        :return: None
+        :rtype: None
+        """
         # Remember which nodes we visited
         visited_pairs = set()
 
         # Initialise cost_counter from the specified starting node
         node_pair_cost = cost_counter(start_node)
-        #
-        # # Get connected nodes
-        # incoming_node = start_node
-        # outgoing_nodes = self.adjacency[incoming_node]['next']
-        #
-        # # For each of the connected nodes, add it to the current cost_counter
-        # next_node_pairs = []
-        # for outgoing_node in outgoing_nodes:
-        #     outgoing_node_cost = node_pair_cost + outgoing_node
-        #
-        #     # Add cost (or swap)
-        #     current_path_cost, _ = self.adjacency[outgoing_node]['cost'].setdefault(outgoing_node_cost.ancestor, (outgoing_node_cost, incoming_node))
-        #     current_path_cost = compare([current_path_cost, outgoing_node_cost])
-        #     self.adjacency[outgoing_node]['cost'][outgoing_node_cost.ancestor] = (current_path_cost, incoming_node)
-        #
-        #     next_node_pairs.append((incoming_node, outgoing_node))
-        # next_nodes_to_visit = next_node_pairs
+
         next_nodes_to_visit = [(None, start_node)]
 
         # For the next node pair to visit
@@ -272,41 +288,70 @@ class DirectedGraph(Graph):
             # Get pair and continue or skip
             node_pair = next_nodes_to_visit.pop(0)  # /!\ important to pop the first item and not the last
                                                     #     so as not do go in depth but in breadth!
-            incoming_node, outgoing_node = node_pair
+            incoming_node, current_node = node_pair
             if node_pair in visited_pairs: continue
 
             # Mark visited
             visited_pairs.add(node_pair)
 
             # Get costs
-            previous_costs = self.adjacency[outgoing_node]['cost'].values()
-            previous_costs = previous_costs if previous_costs else [(node_pair_cost, None)]
+            previous_costs = self.adjacency[current_node]['cost'].values()
+            previous_costs = previous_costs if previous_costs else [(node_pair_cost, None)]  # First node
 
-            # Get outgoing nodes from the outgoing node
-            outgoing_nodes = self.adjacency[outgoing_node]['next']
+            # Get outgoing nodes from the current node
+            outgoing_nodes = self.adjacency[current_node]['next']
 
-            incoming_node = outgoing_node
+            incoming_node = current_node
             next_node_pairs = []
             for outgoing_node in outgoing_nodes:
                 next_node_pairs.append((incoming_node, outgoing_node))
-                for (previous_cost, _) in previous_costs:
+
+                # They might be several previous costs if they are more than one start node
+                for (previous_cost, _ignored_previous_incoming_node) in previous_costs:
+                    # The new cost is the preivous one plus the current outgoing_node
                     outgoing_node_cost = previous_cost + outgoing_node
 
-                    prev_path_cost, prev_path_incoming = self.adjacency[outgoing_node]['cost'].setdefault(outgoing_node_cost.ancestor,
-                                                                                         (None, None))
-                    current_path_cost = compare([prev_path_cost, outgoing_node_cost]) if prev_path_cost else outgoing_node_cost
-                    #print(incoming_node, outgoing_node, (outgoing_node_cost, incoming_node), (prev_path_cost, prev_path_incoming), current_path_cost)
-                    self.adjacency[outgoing_node]['cost'][outgoing_node_cost.ancestor] = (current_path_cost, prev_path_incoming if current_path_cost == prev_path_cost else incoming_node)
+                    # Get the cost with the same ancestor that was previously attached to this node
+                    prev_path_cost, prev_path_incoming = \
+                        self.adjacency[outgoing_node]['cost'].setdefault(outgoing_node_cost.ancestor, (None, None))
+                    # Choose the best according to the user definition
+                    current_path_cost = selection_rule([prev_path_cost, outgoing_node_cost], **kwargs) \
+                                        if prev_path_cost else outgoing_node_cost
+                    selected_cost_prev_node = (current_path_cost, prev_path_incoming if current_path_cost == prev_path_cost else incoming_node)
+                    # Set the new cost and corresponding previous node
+                    self.adjacency[outgoing_node]['cost'][outgoing_node_cost.ancestor] = selected_cost_prev_node
             next_nodes_to_visit.extend(next_node_pairs)
 
-    def compute_costs(self, cost_counter, selection_rule):
+    def compute_costs(self, cost_counter: Cost, selection_rule: Callable, **kwargs) -> None:
+        """
+        Assign a cost to each of the edges of the graph starting from each start node
+        :param cost_counter: object containing the cost of transitioning from one node to another
+        :type cost_counter: Cost
+        :param selection_rule: function used to decide which of two cost is the best
+        :type selection_rule: Callable
+        :param kwargs: dictionary of attributes/values
+        :type kwargs: dict
+        :return: None
+        :rtype: None
+        """
         for start_node in self.start_nodes:
-            self._compute_cost(start_node, cost_counter, selection_rule)
+            self._compute_cost(start_node, cost_counter, selection_rule, **kwargs)
 
-    def best_path(self, cost_counter, selection_rule):
+    def best_path(self, cost_counter: Cost, selection_rule: Callable, **kwargs) -> List:
+        """
+        Returns the best path within graph
+        :param cost_counter: object containing the cost of transitioning from one node to another
+        :type cost_counter: Cost
+        :param selection_rule: function used to decide which of two cost is the best
+        :type selection_rule: Callable
+        :param kwargs: dictionary of attributes/values
+        :type kwargs: dict
+        :return: list of edges forming the best path
+        :rtype: List
+        """
 
         # Traverse the graph and compute a cost for each edge in the graph
-        self.compute_costs(cost_counter, selection_rule)
+        self.compute_costs(cost_counter, selection_rule, **kwargs)
 
         best_path = []
 
@@ -315,7 +360,7 @@ class DirectedGraph(Graph):
         for end_node in self.end_nodes:
             for _ignored_candidate_start_node, (path_cost, previous_node) in self.adjacency[end_node]['cost'].items():
                 path_cost_temp[path_cost] = (end_node, previous_node)
-        best_end_node = selection_rule(path_cost_temp.keys())
+        best_end_node = selection_rule(path_cost_temp.keys(), **kwargs)
         target_start_node = best_end_node.ancestor
 
         # Add these nodes to best_path
@@ -327,7 +372,7 @@ class DirectedGraph(Graph):
             best_path.append(self.adjacency[previous_node]['cost'][target_start_node][-1])
             previous_node = best_path[-1]
 
-        return list(reversed(best_path))
+        return list(pairwise(reversed(best_path)))
 
     def _apply_transition_rules(self, candidate_node: Node, connected_node: Node, **kwargs: dict) -> bool:
         """
@@ -362,9 +407,3 @@ class DirectedGraph(Graph):
             for output_node in self.adjacency[input_node]['next']:
                 yield input_node, output_node
         return
-
-    def __neg__(self):
-        edges = list(self)
-        reversed_edges = [(b,a) for (a, b) in edges]
-
-        return DirectedGraph.from_tuple_list(reversed_edges)

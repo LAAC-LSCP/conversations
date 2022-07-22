@@ -17,10 +17,12 @@
 #   Description: 
 #       • 
 # -----------------------------------------------------------------------------
+from typing import List, Set
 
 import graphviz
 from itertools import cycle
 
+from .Graph import Node
 from .utils import pairwise
 
 NODE_START_COLOR = 'chartreuse'
@@ -32,7 +34,14 @@ COLOR_LIST = ["lightpink", "lightyellow", "lightskyblue",
               "lightseagreen", "lightslateblue", "lightgreen", "lightcoral"]
 
 
-def get_actors(interactional_sequence):
+def get_actors(interactional_sequence: List[Node]) -> dict:
+    """
+    Returns a dictionary of actors with a list of their nodes as value
+    :param interactional_sequence: tuple of nodes
+    :type interactional_sequence: List[Node]
+    :return: dictionary of actors with a list of their nodes as value
+    :rtype: dict
+    """
     actors = dict()
 
     for nodes in interactional_sequence:
@@ -46,7 +55,14 @@ def get_actors(interactional_sequence):
     return actors
 
 
-def _timeline_subgraph(segment_onsets):
+def _timeline_subgraph(segment_onsets: List[int]) -> graphviz.Digraph:
+    """
+    Creates a subgraph for the timeline which will be used to nodes
+    :param segment_onsets: list of segment onsets
+    :type segment_onsets: List[int]
+    :return: graphviz Digraph subgraph for the timeline
+    :rtype: graphviz.Digraph
+    """
     tl_subgraph = graphviz.Digraph(edge_attr={'style': 'invis'},
                                    node_attr={'shape': 'box', 'style': 'invis'})
     # Normal nodes
@@ -61,7 +77,15 @@ def _timeline_subgraph(segment_onsets):
     return tl_subgraph
 
 
-def _actor_subgraph(actor_names):
+def _actor_subgraph(actor_names: List[str]) -> graphviz.Digraph:
+    """
+    Creates a subgraph that contains one anchor node for each actor. This anchor nodes will be connected to the
+    first real segment of each actor
+    :param actor_names: name of the actor
+    :type actor_names: str
+    :return: graphviz Digraph subgraph of anchor nodes for each actor and edges between each pair of anchor node
+    :rtype: graphviz.Digraph
+    """
     # Actor subgraph
     actor_subgraph = graphviz.Digraph(edge_attr={'style': 'invis'},
                                       node_attr={'shape': 'plaintext'},
@@ -72,7 +96,18 @@ def _actor_subgraph(actor_names):
     return actor_subgraph
 
 
-def _segment_subgraphs(actors_name_segments, start_nodes, end_nodes):
+def _segment_subgraphs(actors_name_segments: dict, start_nodes: Set[Node], end_nodes: Set[Node]) -> List[graphviz.Digraph]:
+    """
+    Creates the node for each segment of each actor
+    :param actors_name_segments: dictionary of actors with a list of their segments as value
+    :type actors_name_segments: dict
+    :param start_nodes: list of all the node that are start nodes
+    :type start_nodes: Set[Node]
+    :param end_nodes: list of all the node that are end nodes
+    :type end_nodes: Set[Node]
+    :return: list of graphviz Digraph subgraph with one subgraph for each actor, containing all of its nodes
+    :rtype: List[graphviz.Digraph]
+    """
     graphs = []
 
     graph_colors = cycle(COLOR_LIST)
@@ -109,19 +144,36 @@ def _segment_subgraphs(actors_name_segments, start_nodes, end_nodes):
     return graphs
 
 
-def _turn_subgraph(interactional_sequence, label_edges=False, highlight_edges=[]):
+def _turn_subgraph(interactional_sequence: List[Node], highlight_edges: List[Node] =[]) -> graphviz.Digraph:
+    """
+    Creates a subgraph that add the edges that connect the segments together
+    :param interactional_sequence: list of edges of the interactional sequence
+    :type interactional_sequence: List[Node]
+    :param highlight_edges: list of edges that should be hightlighted
+    :type highlight_edges: List[Node]
+    :return: graphviz Digraph subgraph with edges between segments
+    :rtype: graphviz.Digraph
+    """
     prompt_response_subgraph = graphviz.Digraph()
     # Add prompt/response edges
     for prompt, response in interactional_sequence:
         color = 'black' if (prompt, response) not in highlight_edges else 'red'
         penwidth = "1" if (prompt, response) not in highlight_edges else "4"
-        label = str((response.onset - prompt.offset)/1000) if label_edges else ''
-        prompt_response_subgraph.edge(str(prompt), str(response), label=label, color=color, penwidth=penwidth)
+        prompt_response_subgraph.edge(str(prompt), str(response), color=color, penwidth=penwidth)
 
     return prompt_response_subgraph
 
 
-def _timeline_alignment_subgraphs(segment_onsets, actor_names):
+def _timeline_alignment_subgraphs(segment_onsets: List, actor_names: List[str]) -> graphviz.Digraph:
+    """
+    Creates a subgraph that aligns all the segment nodes to their corresponding timeline node
+    :param segment_onsets: list of (index, onset) pairs of each node
+    :type segment_onsets: list of (index, onset) pairs
+    :param actor_names: name of the actors the segments belong to
+    :type actor_names: List[str]
+    :return: graphviz Digraph subgraph with alignment edges between timeline nodes and segment nodes
+    :rtype: graphviz.Digraph
+    """
     graphs = []
 
     # Align each speaker's node to the right timeline node
@@ -141,8 +193,16 @@ def _timeline_alignment_subgraphs(segment_onsets, actor_names):
     return graphs
 
 
-def generate_interactional_sequence_visualisation(interactional_sequence, label_edges=False, highlight_edges = []):
-    print(highlight_edges)
+def generate_interactional_sequence_visualisation(interactional_sequence: List[Node], highlight_edges: List[Node] = []):
+    """
+    Generates the graph of an interactional sequence
+    :param interactional_sequence: tuple of nodes
+    :type interactional_sequence: List[Node]
+    :param highlight_edges: tuple of nodes whose edges will be highlighted
+    :type highlight_edges: List[Node]
+    :return: graphviz Digraph object
+    :rtype: graphviz.Digraph
+    """
     # Sort segments by onset
     sorted_interaction_sequence_turns = sorted(interactional_sequence, key=lambda tup: tup[0].onset)
     prompts, responses = zip(*sorted_interaction_sequence_turns)
@@ -166,7 +226,7 @@ def generate_interactional_sequence_visualisation(interactional_sequence, label_
 
     graph.subgraph(actor_subgraph)
     graph.subgraph(timeline_subgraph)
-    turn_subgraph = _turn_subgraph(interactional_sequence, label_edges=label_edges, highlight_edges=highlight_edges)
+    turn_subgraph = _turn_subgraph(interactional_sequence, highlight_edges=highlight_edges)
 
     for segment_subgraph in segment_subgraphs:
         graph.subgraph(segment_subgraph)
