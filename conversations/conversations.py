@@ -63,7 +63,7 @@ class InteractionalSequences(object):
         """
 
         segments = self._data
-        segments['inter_seq_index'], segments['conv_turn_index'] = '', ''
+        segments['inter_seq_index'], segments['conv_turn_index'], segments['inter_seq'] = '', '', ''
 
         # Label interactional sequence and turns
         flattened_interactional_sequences = list(map(lambda it: sorted([item.index for item in set(flatten(it))]),
@@ -71,18 +71,20 @@ class InteractionalSequences(object):
 
         for index_is, interactional_sequence in enumerate(flattened_interactional_sequences, 1):
             # Concatenate old labelling with new labelling in case interactional chains were disconnected
-            segments.loc[interactional_sequence, 'inter_seq_index'] = \
-                segments.loc[interactional_sequence, 'inter_seq_index'] + str(index_is)
-            segments.loc[interactional_sequence, 'conv_turn_index'] = \
-                segments.loc[interactional_sequence, 'conv_turn_index'] + str(range(1, len(interactional_sequence) + 1))
+            for index_turn, index_segment in enumerate(interactional_sequence, 1):
+                prev_inter_seq_indices = list(filter(bool, segments.loc[index_segment, 'inter_seq_index'].split(',')))
+                prev_conv_turn_indices = list(filter(bool, segments.loc[index_segment, 'conv_turn_index'].split(',')))
+
+                segments.loc[index_segment, 'inter_seq_index'] = ','.join(prev_inter_seq_indices+[str(index_is)])
+                segments.loc[index_segment, 'conv_turn_index'] = ','.join(prev_conv_turn_indices+[str(index_turn)])
 
         # Label conversational turns
         segments['inter_seq'] = segments[['inter_seq_index', 'conv_turn_index']].apply(
-            lambda row: '({}) '.format(str(row.name)) + '-'.join(
-                row.astype(str) if all(map(lambda i: i != '', row.astype(str))) else []),
+            lambda row: '({}) '.format(str(row.name)) + ' '.join(
+                        map(lambda items: '-'.join(items), zip(filter(bool, row['inter_seq_index'].split(',')),
+                                                          filter(bool, row['conv_turn_index'].split(','))))),
             axis=1
         )
-
         return segments
 
     def __get__(self, index) -> int:
