@@ -132,6 +132,7 @@ class Conversation(object):
     Class defining the parameters of a conversation
     """
     def __init__(self,  segment_type = Segment,
+                        cost_type = PathCost,
                         # Segment connectivity
                         allowed_gap: int = 1000, allowed_overlap: int = 0,
                         allow_segment_jump: bool = False,
@@ -148,7 +149,10 @@ class Conversation(object):
         Initialisator
         :param segment_type: class that is used to construct represent the segments in the graph. This class should
         be a subclassed from `Node` class
-        :type segment_type: Segment
+        :type segment_type: Node
+        :param cost_type: class that is used to compute the cost of a given path in the graph. This class should
+        be a subclassed from `Cost` class
+        :type cost_type: Cost
         :param allowed_gap: Maximum amount of time between two segments for them to be considered connected
         :type allowed_gap: int
         :param allowed_overlap: Maximum amount of time two segments are allowed to overlap to be considered connected
@@ -199,6 +203,7 @@ class Conversation(object):
                 ValueError('Specify which column should be used to assert linguitic type using lx_col parameter.')
 
         self.segment_type =  segment_type
+        self.cost_type = cost_type
 
         # Segment connectivity
         self._allowed_gap = allowed_gap
@@ -475,7 +480,7 @@ class Conversation(object):
         # Find best path for each connected component (if necessary)
         if self.best_path_selection_rules:
             for inter_seq in interactional_sequences:
-                best_path = inter_seq._interactional_sequence.best_path(PathCost,
+                best_path = inter_seq._interactional_sequence.best_path(self.cost_type,
                                                                         self.best_path_selection_rules, **self._kwargs)
                 inter_seq._best_path = DirectedGraph.from_tuple_list(best_path)
         # Filter out sequences
