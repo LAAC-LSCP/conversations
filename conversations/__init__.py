@@ -21,3 +21,5 @@
 __version__ = "0.1.0"
 __author__ = 'William N. Havard'
 __credits__ = 'Laboratoire de Sciences Cognitives et Psycholinguistique (LSCP), ENS/CNRS/INRIA/EHESS, Paris, France'
+
+from .conversations import Conversation

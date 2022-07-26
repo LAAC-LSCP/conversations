@@ -20,6 +20,7 @@
 
 import abc
 from itertools import chain, repeat
+from pprint import pprint
 from typing import Callable, List, Tuple, Set, Dict, Optional
 
 from .utils import pairwise
@@ -40,6 +41,16 @@ class Cost(abc.ABC):
     """
     @abc.abstractmethod
     def __add__(self, other: Node):
+        pass
+
+    @property
+    @abc.abstractmethod
+    def ancestor(self) -> Node:
+        """
+        Represents the start node of the path we compute the cost of
+        :return: start node
+        :rtype: Node
+        """
         pass
 
 
