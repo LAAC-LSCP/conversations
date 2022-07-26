@@ -19,7 +19,7 @@
 # -----------------------------------------------------------------------------
 
 import os
-from typing import Callable, Optional
+from copy import deepcopy
 
 from .Graph import DirectedGraph, Node, Cost
 from .graph_visualisation import generate_interactional_sequence_visualisation
@@ -126,6 +126,8 @@ class PathCost(Cost):
         self._ancestor = segment
         self._speakers = [segment.speaker]
         self._duration = segment.duration
+        self._turn_transitions = 0
+        self._multi_unit_turn_transitions = 0
 
     @property
     def num_speakers(self) -> int:
@@ -153,6 +155,24 @@ class PathCost(Cost):
         :rtype: int
         """
         return self.num_segments - 1
+
+    @property
+    def num_turn_transitions(self) -> int:
+        """
+        Returns the number turn transitions (between a speaker and another speaker)
+        :return: number of turn transitions
+        :rtype: int
+        """
+        return self._turn_transitions
+
+    @property
+    def num_multi_turns_transitions(self)  -> int:
+        """
+        Returns the number of multi-unit turns (between a speaker and the same speaker)
+        :return: number of multi-unit turns
+        :rtype: int
+        """
+        return self._multi_unit_turn_transitions
 
     @property
     def duration(self):
@@ -183,14 +203,16 @@ class PathCost(Cost):
         assert isinstance(other, Node), ValueError('Can only add Node (or inherited) to PathCost!')
 
         # Create fresh copy
-        new_cost = PathCost(self._ancestor)
-        # Copy old information
-        new_cost._speakers = self._speakers.copy()
-        new_cost._duration = self._duration
+        new_cost = deepcopy(self)
+        # /!\ use original ancestor as deep copy creates a fresh copy (and thus changes its address) which prevents
+        # best path selection to work properly.
+        new_cost._ancestor = self._ancestor
 
         # Add segment information
-        new_cost._speakers.append(other.speaker)
         new_cost._duration += other.duration
+        new_cost._turn_transitions += 1 if other.speaker != new_cost._speakers[-1] else 0
+        new_cost._multi_unit_turn_transitions += 1 if other.speaker == new_cost._speakers[-1] else 0
+        new_cost._speakers.append(other.speaker)
 
         return new_cost
 
@@ -204,13 +226,17 @@ class PathCost(Cost):
                     \n\tancestor: {}\
                     \n\tnum_segments: {}\
                     \n\tnum_turns: {}\
+                    \n\tnum_turn_transition: {}\
+                    \n\tnum_multi_turns_transitions: {}\
                     \n\tnum_speakers: {}\
                     \n\tduration: {} at {}>'.format(type(self).__name__,
-                                             self.ancestor,
-                                             self.num_segments,
-                                             self.num_turns,
-                                             self.num_speakers,
-                                             self.duration, hex(id(self)))
+                                                    self.ancestor,
+                                                    self.num_segments,
+                                                    self.num_turns,
+                                                    self.num_turn_transitions,
+                                                    self.num_multi_turns_transitions,
+                                                    self.num_speakers,
+                                                    self.duration, hex(id(self)))
 
 
 class InteractionalSequence(object):
@@ -275,9 +301,9 @@ class InteractionalSequence(object):
         :return: graphviz Digraph object
         :rtype: graphviz.Digraph
         """
-        if raw_with_best_path:
+        if raw_with_best_path and self._best_path:
             return generate_interactional_sequence_visualisation(list(self._interactional_sequence),
-                                                                 highlight_edges= list(self._best_path))
+                                                                 highlight_edges=list(self._best_path))
         else:
             return generate_interactional_sequence_visualisation(list(self))
 
