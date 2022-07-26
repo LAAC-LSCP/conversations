@@ -100,7 +100,7 @@ def default_filtering_rules(chain_sequences: List[InteractionalSequence], target
     return chain_sequences
 
 
-def default_path_selection_rules(path_list: List[Cost], **kwargs):
+def default_path_selection_rules(path_list: List[Cost], selection_key: List[str], **kwargs):
     """
     Sorts a list of Cost and return the best
     :param path_list: list of costs
@@ -110,4 +110,4 @@ def default_path_selection_rules(path_list: List[Cost], **kwargs):
     :return: best cost (as defined by the sorting function and the keys used)
     :rtype: Cost
     """
-    return sorted(path_list, reverse=True, key=attrgetter('num_turns'))[0]
+    return sorted(path_list, reverse=True, key=attrgetter(*selection_key))[0]
