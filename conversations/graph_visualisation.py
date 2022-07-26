@@ -28,8 +28,7 @@ from .utils import pairwise
 NODE_START_COLOR = 'chartreuse'
 NODE_END_COLOR = 'crimson'
 COLOR_LIST = ["lightpink", "lightyellow", "lightskyblue",
-              "lightgoldenrodyellow", "lightcyan", "lightsteelblue",
-              "lightgrey", "lightslategray", "lightblue",
+              "lightcyan", "lightsteelblue", "lightgrey", "lightslategray", "lightblue",
               "lightgray", "lightgoldenrod", "lightsalmon",
               "lightseagreen", "lightslateblue", "lightgreen", "lightcoral"]
 
