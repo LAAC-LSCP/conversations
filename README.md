@@ -6,31 +6,23 @@ The `conversations` package is a tool that helps you find interactional sequence
 * customisibility
 * simple and easy-to-read output (including a visual output!)
 
-## Terminology
+## Installation
 
-### Conversational Analysis
+### pip
 
 TODO
 
-### Directed Acyclic Graphs
+### git
 
-Directed Acyclic Graphs (or DAGs for short) form the backbone of our application. DAGs offer a theoretically grounded way to represent conversational data. In a DAG (see below), **nodes** (e.g. 1, 2, 3, 4, and 5) are connected to one another by **edges** (black arrows). These edges are **directed**, meaning they can only be traversed in **one direction** (e.g from node 1 to node 2, but the opposite way is *not* possible). **Acylic** means there are no cycles, that is, once a node was visited, it is impossible to visit again.
+```bash
+git clone git@github.com:LAAC-LSCP/conversations.git
+cd conversations
+python setup.py develop
+```
 
-| ![Example of a directed acyclic graph](img/directed_acyclic_graph.png) |
-| :----------------------------------------------------------: |
-|        *Fig. 1: Example of a directed acyclic graph*         |
+## What does `conversations` do?
 
-DAGs are ideal for representing conversational data, as the directed edges allow us to represent the flow of time from the past to the future, where naturally no cycles can take place. Hence, in our framework, **nodes represent audio segments** spoken by a specific speaker and **edges represent turns between segments**. **Interactional sequences** are represented as a set of interconnected nodes.
-
-The interactional sequences returned always have two special nodes: 
-
-- the **start node** (e.g. segment 1, in green) which is the first node of an interactional sequence. It represents the first segment that instantiated the whole interactional sequence.
-
-- the **end node** (e.g. segment 4, in red) which is the last node of an interactional sequence. It represents the last, i.e. terminating, segment of a interactional sequence.
-
-## What does `conversations` do?
-
-What our `conversations` package does, is that it reads tabulated data (see below) and finds interactional sequences by building DAGs (see example below).
+What our `conversations` package does, is that it reads tabulated data (see below) and finds interactional sequences by building Directed Acylic Graphs (see Terminology section).
 
 | ![Example of input tabulated data which will be used to build a DAG](img/simple_conversation_tabulated.png) |
 | :----------------------------------------------------------: |
@@ -63,6 +55,31 @@ We adopted a simple CSV output that preserves the initial columns and adds four 
 - the index of the segment inside the interactional sequence (or nothing if it does not belong to an interactional sequence): `conv_turn_index`
 - a formatted column containing the index of the segment, and the interactional sequence it belongs to and the index inside that interactional sequence (or nothing): `inter_seq`. 
   This column is useful when importing the CSV file to ELAN to easily label segments, and allows to easily debug your settings.
+
+## Terminology
+
+### Conversational Analysis
+
+| ![Terminology used in our package](img/conversations_graph.png) |
+| :----------------------------------------------------------: |
+| *Terminology used in our package. This graph was inspired and adapted from `chattr` ([CC BY 4.0](https://creativecommons.org/licenses/by/4.0/). TikZ code availaible in `img`)* |
+
+### Directed Acyclic Graphs
+
+Directed Acyclic Graphs (or DAGs for short) form the backbone of our application. DAGs offer a theoretically grounded way to represent conversational data. In a DAG (see below), **nodes** (e.g. 1, 2, 3, 4, and 5) are connected to one another by **edges** (black arrows). These edges are **directed**, meaning they can only be traversed in **one direction** (e.g from node 1 to node 2, but the opposite way is *not* possible). **Acylic** means there are no cycles, that is, once a node was visited, it is impossible to visit again.
+
+| ![Example of a directed acyclic graph](img/directed_acyclic_graph.png) |
+| :----------------------------------------------------------: |
+|        *Fig. 1: Example of a directed acyclic graph*         |
+
+DAGs are ideal for representing conversational data, as the directed edges allow us to represent the flow of time from the past to the future, where naturally no cycles can take place. Hence, in our framework, **nodes represent audio segments** spoken by a specific speaker and **edges represent turns between segments**. **Interactional sequences** are represented as a set of interconnected nodes.
+
+The interactional sequences returned always have two special nodes: 
+
+- the **start node** (e.g. segment 1, in green) which is the first node of an interactional sequence. It represents the first segment that instantiated the whole interactional sequence.
+
+- the **end node** (e.g. segment 4, in red) which is the last node of an interactional sequence. It represents the last, i.e. terminating, segment of a interactional sequence.
+
 
 # Using `conversations`
 

@@ -1,0 +1,141 @@
+% Figure inspired and adapted from https://github.com/marisacasillas/chattr-basic
+% TikZ code by William N. Havard
+% Distributed under the Attribution 4.0 International (CC BY 4.0) licence (https://creativecommons.org/licenses/by/4.0/)
+
+\documentclass{article}
+\usepackage[dvipsnames]{xcolor}
+\usepackage{tikz}
+\usepackage{etoolbox}
+\usetikzlibrary{arrows,positioning,calc,decorations.pathreplacing,patterns,backgrounds}
+
+%%%<
+\usepackage{verbatim}
+\usepackage[active,tightpage]{preview}
+\PreviewEnvironment{tikzpicture}
+\setlength\PreviewBorder{5pt}%
+%%%>
+
+\colorlet{SpeakerA}{NavyBlue}
+\colorlet{SpeakerB}{YellowOrange}
+
+\newcommand{\verticalConnector}[3]{
+    \draw[->,black,line width=3] 
+    let
+        \p1=(#1.east),
+        \p2=(#2.west),
+    in
+        (#1.east) -- ++(0.5,0) |- node[\ifdimcomp{\y1}{<}{\y2}{left}{right}] {#3}($(#1.east) !.5! (#2.west) $) |- (#2.west); 
+}
+
+\newcommand{\horizontalConnector}[3]{
+    \draw[->,OrangeRed,line width=3] (#1.south) -- ($(#1.south) - (0, 0.5)$) -- node[below] {#3} ($(#2.south) - (0, 0.5)$) -- (#2.south);
+}
+
+\newcommand{\underbraceMirrorConnector}[5]{
+    % node_begin, node_end, node_y_anchor, y_shift, label
+    \draw [underbraceMirror]
+        let
+            \p1=(#1.west),
+            \p2=(#2.east),
+            \p3=(#3.east)
+        in
+            ($(\x1, \y3)+(0,#4)$) -- node[below=3mm] {#5} ($(\x2, \y3)+(0,#4)$);
+}
+
+\newcommand{\underbraceConnector}[5]{
+    % node_begin, node_end, node_y_anchor, y_shift, label
+    \draw [underbrace]
+        let
+            \p1=(#1.west),
+            \p2=(#2.east),
+            \p3=(#3.east)
+        in
+            ($(\x1, \y3)+(0,#4)$) -- node[above=3mm] {#5} ($(\x2, \y3)+(0,#4)$);
+}
+
+
+\begin{document}
+
+    \begin{tikzpicture}[auto]  
+        \tikzset{
+            background rectangle/.style={fill=white}, show background rectangle,
+            mynodeA/.style={rectangle,fill=SpeakerA,very thick, inner sep=1em, minimum size=3em, text centered,text=white},
+            mynodeB/.style={rectangle,fill=SpeakerB,very thick, inner sep=1em, minimum size=3em, text centered},
+            myinvisiblenode/.style={rectangle,rounded corners,inner sep=1em, minimum size=3em, text centered},
+            underbraceMirror/.style={decorate, decoration = {brace, mirror},line width=3},
+            underbrace/.style={decorate, decoration = {brace},line width=3},
+        } 
+
+        \pgfmathsetmacro{\timeShift}{2.5}
+        \pgfmathsetmacro{\segmentShift}{1.25}
+        \pgfmathsetmacro{\unitShift}{-2.5}
+        \pgfmathsetmacro{\turnShift}{-3.5}
+        \pgfmathsetmacro{\sequenceShift}{-4.5}
+
+        % Speaker node labels
+        \node[myinvisiblenode] (speaker_a) {\textcolor{SpeakerA}{Speaker A}};  
+        \node[myinvisiblenode, below=of speaker_a] (speaker_b) {\textcolor{SpeakerB}{Speaker B}};
+
+        % Speaker nodes
+        \node[mynodeA, right=of speaker_a](speaker_a_1) {Hello!};
+        \node[mynodeB, below right=of speaker_a_1](speaker_b_1) {Hello!};
+        \node[mynodeB, right=of speaker_b_1] (speaker_b_2) {How are you?};
+        \node[mynodeA, above right=of speaker_b_2] (speaker_a_2) {Fine.};
+        \node[mynodeA, right=2.5cm of speaker_a_2] (speaker_a_3) {And you?};
+        \node[mynodeB, below right=of speaker_a_3] (speaker_b_3) {Fine!};
+        \node[mynodeB, right=2.5cm of speaker_b_3] (speaker_b_4) {Well..};
+        \node[mynodeB, right=of speaker_b_4] (speaker_b_5) {Have a nice day!};
+
+        % Vectical connectors
+        \verticalConnector{speaker_a_1}{speaker_b_1}{\textcolor{SpeakerA}{A}-to-\textcolor{SpeakerB}{B} transition}
+        \verticalConnector{speaker_b_2}{speaker_a_2}{\textcolor{SpeakerB}{B}-to-\textcolor{SpeakerA}{A} transition}
+        \verticalConnector{speaker_a_3}{speaker_b_3}{\textcolor{SpeakerA}{A}-to-\textcolor{SpeakerB}{B} transition}
+
+        % Horizontal connectors
+        \horizontalConnector{speaker_b_1}{speaker_b_2}{Multi-units turn}
+        % \horizontalConnector{speaker_a_2}{speaker_a_3}{Multi-units turn}
+        \horizontalConnector{speaker_b_4}{speaker_b_5}{Multi-units turn}
+
+        % Time Axis
+        \draw[draw,black,dashed,->,line width=3]
+            let
+                \p1=(speaker_a_1.west),
+                \p2=(speaker_b_5.east),
+            in
+                ($(\x1, \y1)+(0, \timeShift)$) -- node[above] {Time} ($(\x2, \y1)+(0, \timeShift)$);
+
+        % Units underbraceMirrors
+        \underbraceMirrorConnector{speaker_a_1}{speaker_a_1}{speaker_b_5}{\unitShift}{Unit \#1};
+        \underbraceMirrorConnector{speaker_b_1}{speaker_b_1}{speaker_b_5}{\unitShift}{Unit \#2};
+        \underbraceMirrorConnector{speaker_b_2}{speaker_b_2}{speaker_b_5}{\unitShift}{Unit \#3};
+        \underbraceMirrorConnector{speaker_a_2}{speaker_a_2}{speaker_b_5}{\unitShift}{Unit \#4};
+        \underbraceMirrorConnector{speaker_a_3}{speaker_a_3}{speaker_b_5}{\unitShift}{Unit \#1};
+        \underbraceMirrorConnector{speaker_b_3}{speaker_b_3}{speaker_b_5}{\unitShift}{Unit \#2};
+        \underbraceMirrorConnector{speaker_b_4}{speaker_b_4}{speaker_b_5}{\unitShift}{Unit \#1};
+        \underbraceMirrorConnector{speaker_b_5}{speaker_b_5}{speaker_b_5}{\unitShift}{Unit \#2};
+
+        \underbraceConnector{speaker_a_1}{speaker_a_1}{speaker_a_1}{\segmentShift}{Segment \#1};
+        \underbraceConnector{speaker_b_1}{speaker_b_1}{speaker_a_1}{\segmentShift}{Segment \#2};
+        \underbraceConnector{speaker_b_2}{speaker_b_2}{speaker_a_1}{\segmentShift}{Segment \#3};
+        \underbraceConnector{speaker_a_2}{speaker_a_2}{speaker_a_1}{\segmentShift}{Segment \#4};
+        \underbraceConnector{speaker_a_3}{speaker_a_3}{speaker_a_1}{\segmentShift}{Segment \#5};
+        \underbraceConnector{speaker_b_3}{speaker_b_3}{speaker_a_1}{\segmentShift}{Segment \#6};
+        \underbraceConnector{speaker_b_4}{speaker_b_4}{speaker_a_1}{\segmentShift}{Segment \#7};
+        \underbraceConnector{speaker_b_5}{speaker_b_5}{speaker_a_1}{\segmentShift}{Segment \#8};
+  
+        % Turns underbraceMirrors
+        \underbraceMirrorConnector{speaker_a_1}{speaker_a_1}{speaker_b_5}{\turnShift}{Turn \#1};
+        \underbraceMirrorConnector{speaker_b_1}{speaker_b_2}{speaker_b_5}{\turnShift}{Turn \#2};
+        \underbraceMirrorConnector{speaker_a_2}{speaker_a_2}{speaker_b_5}{\turnShift}{Turn \#3};
+        \underbraceMirrorConnector{speaker_a_3}{speaker_a_3}{speaker_b_5}{\turnShift}{Turn \#1};
+        \underbraceMirrorConnector{speaker_b_3}{speaker_b_3}{speaker_b_5}{\turnShift}{Turn \#2};
+        \underbraceMirrorConnector{speaker_b_4}{speaker_b_5}{speaker_b_5}{\turnShift}{Turn \#1};
+        
+        % Sequence underbraceMirrors
+            % Vocalisation sequence
+        \underbraceMirrorConnector{speaker_a_1}{speaker_a_2}{speaker_b_5}{\sequenceShift}{Interactional Sequence \#1};
+        \underbraceMirrorConnector{speaker_a_3}{speaker_b_3}{speaker_b_5}{\sequenceShift}{Interactional Sequence \#2};
+        \underbraceMirrorConnector{speaker_b_4}{speaker_b_5}{speaker_b_5}{\sequenceShift}{Vocalisation Sequence \#1};
+    \end{tikzpicture} 
+    
+\end{document}
