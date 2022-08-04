@@ -10,6 +10,7 @@ setup(
     license='MIT',
     packages=['conversations'],
     install_requires=['pandas'],
+    extra_requires=['graphviz'],
 
     classifiers=[
         'Development Status :: 2 - Pre-Alpha',

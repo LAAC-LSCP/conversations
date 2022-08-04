@@ -22,8 +22,6 @@ import os
 from copy import deepcopy
 
 from .Graph import DirectedGraph, Node, Cost
-from .graph_visualisation import generate_interactional_sequence_visualisation
-
 
 
 class Segment(Node):
@@ -301,6 +299,7 @@ class InteractionalSequence(object):
         :return: graphviz Digraph object
         :rtype: graphviz.Digraph
         """
+        from .graph_visualisation import generate_interactional_sequence_visualisation
         if raw_with_best_path and self._best_path:
             return generate_interactional_sequence_visualisation(list(self._interactional_sequence),
                                                                  highlight_edges=list(self._best_path))
