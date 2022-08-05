@@ -20,11 +20,20 @@ EMPTY_FILE = 'tests/data/empty_file'
 def conv():
     return Conversation()
 
-def test_import_csv(conv):
-    res = conv.from_csv(CSV_INPUT)
+@pytest.mark.parametrize("file,test", [
+       (CSV_INPUT,'correct'),
+       (EMPTY_FILE,'empty'),])
+def test_import_csv(conv, file, test):
+    caught = False
+    try:
+        res = conv.from_csv(file)
+    except Exception as e:
+        caught = True    
     truth = pd.read_csv('tests/truth/df-csv.csv')
     #res.to_csv('tests/truth/df-csv.csv',index=False)
-    pd.testing.assert_frame_equal(res.reset_index(drop=True), truth.reset_index(drop=True), check_like=True)
+    if test == 'correct': pd.testing.assert_frame_equal(res.reset_index(drop=True), truth.reset_index(drop=True), check_like=True)
+    elif test == 'empty' : assert caught
+    else : raise NotImplementedError('this test is not captured')
 
 RTTM_MAP = (defaultdict(lambda: pd.NA,
                          {"CHI": "OCH",
@@ -86,7 +95,7 @@ def test_import_its(conv,mapg,file,source,test):
     if test == "mapping": pd.testing.assert_frame_equal(res.reset_index(drop=True), truth_mapped.reset_index(drop=True), check_like=True)
     elif test == "vanilla": pd.testing.assert_frame_equal(res.reset_index(drop=True), truth.reset_index(drop=True), check_like=True)
     elif test == "no-dict" : assert caught
-    elif test == 'source_file' : pd.testing.assert_frame_equal(res.reset_index(drop=True), truth.head(5).reset_index(drop=True), check_like=True)
-    elif test == 'source_and_map' : pd.testing.assert_frame_equal(res.reset_index(drop=True), truth_mapped.head(3).reset_index(drop=True), check_like=True)
+    elif test == 'source_file' : pd.testing.assert_frame_equal(res.reset_index(drop=True), truth.head(23289).reset_index(drop=True), check_like=True)
+    elif test == 'source_and_map' : pd.testing.assert_frame_equal(res.reset_index(drop=True), pd.DataFrame(columns=['segment_onset','segment_offset', 'speaker_type']).reset_index(drop=True), check_like=True)
     elif test == 'empty' : assert caught
     else : raise NotImplementedError('this test is not captured')

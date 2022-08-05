@@ -424,9 +424,9 @@ class Conversation(object):
             logging.warning(
                 "WARNING: {} contains annotations from {} assembled recordings. No recording_num was specified so all annotations will be imported together.".format(filepath,len(recordings))
             )
-        if recording_num > len(recordings):
+        if recording_num and recording_num > len(recordings):
             logging.warning(
-                "WARNING: file {} : recording_num {} does not exist.".format(filepath,recording_num,len(recordings))
+                "WARNING: file {} : recording_num {} does not exist. Returnin empty DataFrame".format(filepath,recording_num,len(recordings))
             )
 
         for recording in recordings:
@@ -448,7 +448,8 @@ class Conversation(object):
                     }
                 )
 
-        df = pd.DataFrame(segments)
+        df = pd.DataFrame(segments, columns=['segment_onset','segment_offset', 'speaker_type'])
+        df.dropna(inplace=True)
 
         return df
     #
