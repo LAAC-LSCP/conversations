@@ -25,6 +25,7 @@ from .utils import flatten, overlaps
 from typing import List, Union, Callable, Optional
 
 import pandas as pd
+import numpy as np
 
 class InteractionalSequences(object):
     """
@@ -405,14 +406,12 @@ class Conversation(object):
         # For each nodes, get connected nodes
         segments['connected_nodes'] = segments.apply(axis=1,
                 func=lambda t_row: segments[
-                    segments.apply(axis=1,
-                                      # Get overlapping segments
-                        func=lambda c_row: (overlaps(c_row['segment_onset'], c_row['segment_offset'],
-                                                t_row['segment_onset'], t_row['segment_offset'] + self.allowed_gap))
-                                      # only look after. /!\ only use > and not >= as it might create cycles
-                                      and c_row['segment_onset'] > t_row['segment_onset']
-                                      # Remove identical segments
-                                      and t_row.name != c_row.name)
+                    (0 < (np.minimum(segments['segment_offset'].to_numpy(), t_row['segment_offset']+ self.allowed_gap) 
+                             - 
+                             np.maximum(segments['segment_onset'].to_numpy(), t_row['segment_onset'])
+                             ))
+                    & (segments['segment_onset'].to_numpy() >= t_row['segment_onset'])
+                    & (t_row.name != segments.name.to_numpy())
                 ])
 
         if not self.allow_segment_jump:
