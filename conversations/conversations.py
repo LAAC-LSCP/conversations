@@ -452,6 +452,62 @@ class Conversation(object):
         df.dropna(inplace=True)
 
         return df
+    
+    @classmethod
+    def from_txt(cls, filepath) -> pd.DataFrame:
+        """
+        Reads a txt file and return a data frame. The input .txt should be a plain-text,
+        tab-separated file with a header row that contains the column names.
+        The three columns must be speaker_type , segment_onset , segment_offset
+        :param filepath: path to the txt file to be read
+        :type filepath: str
+        :return: pandas DataFrame
+        :rtype: pd.DataFrame
+        """
+        # TODO: for CLI interface, allow user to drop lines based on condition
+        df = pd.read_csv(filepath, sep='\t')
+        assert COLUMNS_REQUIRED.issubset(df.columns)
+        df = df[COLUMNS_REQUIRED]
+        df.dropna(inplace=True)
+        return df
+    
+    @classmethod
+    def from_eaf(cls, filepath) -> pd.DataFrame:
+        """
+        Reads a EAF file and return a data frame. All the existing tiers are imported
+        and the name of the tier is used as the value for speaker_type
+        :param filepath: path to the CSV file to be read
+        :type filepath: str
+        :return: pandas DataFrame
+        :rtype: pd.DataFrame
+        """
+        #
+        #TODO handle tiers in more depth, perhaps remove subtiers? Perhaps remove some tiers based on the name?
+        # Perhaps map tier names to normalized speaker_type?
+        #
+        import pympi
+
+        eaf = pympi.Elan.Eaf(filepath)
+        segments = {}
+        
+        for tier_name in eaf.tiers:
+            annotations = eaf.tiers[tier_name][0]
+            
+            for aid in annotations:
+                (start_ts, end_ts, value, svg_ref) = annotations[aid]
+                (start_t, end_t) = (eaf.timeslots[start_ts], eaf.timeslots[end_ts])
+
+                segment = {
+                    "segment_onset": int(round(start_t)),
+                    "segment_offset": int(round(end_t)),
+                    "speaker_type": tier_name,
+                }
+
+                segments[aid] = segment
+                
+        return pd.DataFrame(segments.values())
+    
+    
     #
     #   Interactional sequences
     #

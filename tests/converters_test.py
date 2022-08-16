@@ -12,6 +12,7 @@ import pytest
 import pandas as pd
 
 CSV_INPUT = 'tests/data/example_2.csv'
+TXT_INPUT = 'tests/data/example_2.txt'
 RTTM_INPUT = 'tests/data/example.rttm'
 ITS_INPUT = 'tests/data/example_lena_new.its'
 EMPTY_FILE = 'tests/data/empty_file'
@@ -97,5 +98,20 @@ def test_import_its(conv,mapg,file,source,test):
     elif test == "no-dict" : assert caught
     elif test == 'source_file' : pd.testing.assert_frame_equal(res.reset_index(drop=True), truth.head(23289).reset_index(drop=True), check_like=True)
     elif test == 'source_and_map' : pd.testing.assert_frame_equal(res.reset_index(drop=True), pd.DataFrame(columns=['segment_onset','segment_offset', 'speaker_type']).reset_index(drop=True), check_like=True)
+    elif test == 'empty' : assert caught
+    else : raise NotImplementedError('this test is not captured')
+    
+@pytest.mark.parametrize("file,test", [
+       (TXT_INPUT,'correct'),
+       (EMPTY_FILE,'empty'),])
+def test_import_txt(conv, file, test):
+    caught = False
+    try:
+        res = conv.from_txt(file)
+    except Exception as e:
+        caught = True    
+    truth = pd.read_csv('tests/truth/df-csv.csv')
+    #res.to_csv('tests/truth/df-csv.csv',index=False)
+    if test == 'correct': pd.testing.assert_frame_equal(res.reset_index(drop=True), truth.reset_index(drop=True), check_like=True)
     elif test == 'empty' : assert caught
     else : raise NotImplementedError('this test is not captured')
