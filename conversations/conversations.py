@@ -19,6 +19,7 @@
 # -----------------------------------------------------------------------------
 import logging
 import re
+from operator import attrgetter
 
 from .Graph import DirectedGraph
 from .Interactions import InteractionalSequence, Segment, PathCost
@@ -27,7 +28,6 @@ from .utils import flatten, overlaps
 from typing import List, Union, Callable, Optional
 
 import pandas as pd
-import numpy as np
 
 COLUMNS_REQUIRED = {"segment_onset","segment_offset","speaker_type"}
 
@@ -68,20 +68,48 @@ class InteractionalSequences(object):
         """
 
         segments = self._data
-        segments['inter_seq_index'], segments['conv_turn_index'], segments['inter_seq'] = '', '', ''
+
+        # Set up output columns
+        segments['inter_seq_index'] = ''
+        segments['conv_turn_index'] = ''
+        segments['inter_seq'] = ''
+
+        # These values only make sense if there is only a single path
+        segments['is_turn_transition'] = ''
+        segments['is_prompt'] = ''
+        segments['is_response'] = ''
 
         # Label interactional sequence and turns
-        flattened_interactional_sequences = list(map(lambda it: sorted([item.index for item in set(flatten(it))]),
+        flattened_interactional_sequences = list(map(lambda it: sorted(list(set(flatten(it))), key=attrgetter('index')),
                                                      self.interactional_sequences))
 
         for index_is, interactional_sequence in enumerate(flattened_interactional_sequences, 1):
             # Concatenate old labelling with new labelling in case interactional chains were disconnected
-            for index_turn, index_segment in enumerate(interactional_sequence, 1):
+            for index_turn, segment in enumerate(interactional_sequence, 0):
+                index_segment = segment.index
+
                 prev_inter_seq_indices = list(filter(bool, segments.loc[index_segment, 'inter_seq_index'].split(',')))
                 prev_conv_turn_indices = list(filter(bool, segments.loc[index_segment, 'conv_turn_index'].split(',')))
 
-                segments.loc[index_segment, 'inter_seq_index'] = ','.join(prev_inter_seq_indices+[str(index_is)])
-                segments.loc[index_segment, 'conv_turn_index'] = ','.join(prev_conv_turn_indices+[str(index_turn)])
+                # Is there a turn transition ?
+                current_speaker = segment.speaker
+                previous_speaker = interactional_sequence[index_turn-1].speaker if index_turn > 0 else None
+                next_speaker = interactional_sequence[index_turn+1].speaker if index_turn < len(interactional_sequence) - 1 else None
+
+                is_turn_transition = bool(previous_speaker) and previous_speaker != current_speaker
+                is_prompt = bool(next_speaker) and current_speaker != next_speaker
+                is_response = is_turn_transition
+
+                segments.loc[index_segment, 'inter_seq_index'] = \
+                    ','.join(prev_inter_seq_indices+[str(index_is)])
+                segments.loc[index_segment, 'conv_turn_index'] = \
+                    ','.join(prev_conv_turn_indices+[str(index_turn+1)])
+                segments.loc[index_segment, 'is_turn_transition'] = \
+                    ','.join(prev_conv_turn_indices+[str(int(is_turn_transition))])
+                segments.loc[index_segment, 'is_prompt'] = \
+                    ','.join(prev_conv_turn_indices + [str(int(is_prompt))])
+                segments.loc[index_segment, 'is_response'] = \
+                    ','.join(prev_conv_turn_indices + [str(int(is_response))])
 
         # Label conversational turns
         segments['inter_seq'] = segments[['inter_seq_index', 'conv_turn_index']].apply(
@@ -568,12 +596,14 @@ class Conversation(object):
         # For each nodes, get connected nodes
         segments['connected_nodes'] = segments.apply(axis=1,
                 func=lambda t_row: segments[
-                    (0 < (np.minimum(segments['segment_offset'].to_numpy(), t_row['segment_offset']+ self.allowed_gap) 
-                             - 
-                             np.maximum(segments['segment_onset'].to_numpy(), t_row['segment_onset'])
-                             ))
-                    & (segments['segment_onset'].to_numpy() >= t_row['segment_onset'])
-                    & (t_row.name != segments.name.to_numpy())
+                    segments.apply(axis=1,
+                                      # Get overlapping segments
+                        func=lambda c_row: (overlaps(c_row['segment_onset'], c_row['segment_offset'],
+                                                t_row['segment_onset'], t_row['segment_offset'] + self.allowed_gap))
+                                      # only look after. /!\ only use > and not >= as it might create cycles
+                                      and c_row['segment_onset'] > t_row['segment_onset']
+                                      # Remove identical segments
+                                      and t_row.name != c_row.name)
                 ])
 
         if not self.allow_segment_jump:
@@ -590,8 +620,7 @@ class Conversation(object):
                                                     else rows.droplevel(0))))
 
         # Retrieve indexes of connected nodes
-        segments['connected_nodes'] = segments['connected_nodes'].apply(lambda df: df.index)
-
+        segments['connected_nodes'] = segments['connected_nodes'].apply(lambda df: list(df.index))
         return segments
 
     def _segments_to_graph(self, segments) -> DirectedGraph:
