@@ -335,8 +335,6 @@ class Conversation(object):
         # TODO: for CLI interface, allow user to drop lines based on condition
         df = pd.read_csv(filepath)
         assert COLUMNS_REQUIRED.issubset(df.columns)
-        df = df[COLUMNS_REQUIRED]
-        df.dropna(inplace=True)
         return df
 
     @classmethod
@@ -371,12 +369,15 @@ class Conversation(object):
         n_recordings = len(df["file"].unique())
         if  n_recordings > 1 and not source_file:
             logging.warning(
-                "WARNING: {} contains annotations from {} different audio files, but no source_file was specified, all annotations will be imported as if they belonged to the same recording. Please make sure this is the intended behavior ".format(filepath,n_recordings)
+                "WARNING: {} contains annotations from {} different audio files, but no source_file was specified, "
+                "all annotations will be imported as if they belonged to the same recording. "
+                "Please make sure this is the intended behavior ".format(filepath,n_recordings)
             )
         df["segment_onset"] = df["tbeg"].mul(1000).round().astype(int)
         df["segment_offset"] = (df["tbeg"] + df["tdur"]).mul(1000).round().astype(int)
         if name_mapping:
-            assert isinstance(name_mapping, dict), "keyword argument <name_mapping> should be a dictionary, found <{}>".format(type(name_mapping))
+            assert isinstance(name_mapping, dict), \
+                "keyword argument <name_mapping> should be a dictionary, found <{}>".format(type(name_mapping))
             df["speaker_type"] = df["name"].map(name_mapping)
         else:
             df["speaker_type"] = df["name"]
@@ -388,11 +389,8 @@ class Conversation(object):
             df = df[df["file"] == source_file]
             if not df.shape[0]:
                 logging.warning(
-                "no lines found for source_file <{}> inside {}, resulting DataFrame is empty".format(source_file,filepath))
-
-        df = df[COLUMNS_REQUIRED]
-        df.dropna(inplace=True)
-        
+                "no lines found for source_file <{}> inside {},"
+                " resulting DataFrame is empty".format(source_file,filepath))
         return df
     
     @classmethod
@@ -423,11 +421,13 @@ class Conversation(object):
         segments = []
         if len(recordings) > 1 and not recording_num:
             logging.warning(
-                "WARNING: {} contains annotations from {} assembled recordings. No recording_num was specified so all annotations will be imported together.".format(filepath,len(recordings))
+                "WARNING: {} contains annotations from {} assembled recordings. "
+                "No recording_num was specified so all annotations will be imported together.".format(filepath,len(recordings))
             )
         if recording_num and recording_num > len(recordings):
             logging.warning(
-                "WARNING: file {} : recording_num {} does not exist. Returnin empty DataFrame".format(filepath,recording_num,len(recordings))
+                "WARNING: file {} : recording_num {} does not exist. "
+                "Returning empty DataFrame".format(filepath,recording_num,len(recordings))
             )
 
         for recording in recordings:
@@ -450,7 +450,6 @@ class Conversation(object):
                 )
 
         df = pd.DataFrame(segments, columns=['segment_onset','segment_offset', 'speaker_type'])
-        df.dropna(inplace=True)
 
         return df
     
@@ -468,8 +467,7 @@ class Conversation(object):
         # TODO: for CLI interface, allow user to drop lines based on condition
         df = pd.read_csv(filepath, sep='\t')
         assert COLUMNS_REQUIRED.issubset(df.columns)
-        df = df[COLUMNS_REQUIRED]
-        df.dropna(inplace=True)
+
         return df
     
     @classmethod

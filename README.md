@@ -30,7 +30,7 @@ What our `conversations` package does, is that it reads tabulated data (see belo
 | ![Example of a simple conversation graph found using the `conversation` package](img/simple_conversation_graph.png) |
 | *Fig. 2: Example of input tabulated data which will be used to build a DAG (top), the same segments in [ELAN](https://archive.mpi.nl/tla/elan) (middle), and the DAG representing the interactional sequence of the tabulated data presented above with best path materialised by red arrows (bottom)* |
 
-Do do so, our package proceeds in three steps:
+To do so, our package proceeds in three steps:
 
 1. find connected segments (segments in close temporal vicinity)
 
@@ -95,7 +95,7 @@ TODO
 
 ## Why do I have several start nodes?
 
-If you are using `default_turn_transition_rules` with `allow_interactions_btw_interactants=False` then this might happen quite often (see example below). In the latter, as interactants are not allowed to interact together, segment 270 (FEM) cannot bind to segment 272 (OCH). However, in both cases segment 272 is allowed to bind with segment 273. As segment 272 isn't bound to any segment before it, it is considered a valid start node.
+If you are using `standard_turn_transition_rules` with `allow_interactions_btw_interactants=False` then this might happen quite often (see example below). In the latter, as interactants are not allowed to interact together, segment 270 (FEM) cannot bind to segment 272 (OCH). However, in both cases segment 272 is allowed to bind with segment 273. As segment 272 isn't bound to any segment before it, it is considered a valid start node.
 
 Note that this not only affects the topology of the raw interactional sequence, but also that of the best path depending on the settings you chose. In this example case, we want the best path (in red) to maximise the number of turns. Despite the segments of the raw interactional sequence being the same in both cases, the resulting best path is different due to the missing connection between node 270 and node 272.
 
