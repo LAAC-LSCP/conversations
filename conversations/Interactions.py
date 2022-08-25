@@ -306,6 +306,12 @@ class InteractionalSequence(object):
         else:
             return generate_interactional_sequence_visualisation(list(self))
 
+    def __getitem__(self, index):
+        return list(self.__iter__())[index]
+
+    def __len__(self):
+        return len(list(self.__iter__()))
+
     def __iter__(self):
         """
         Iterated over the edged of the graph. If a best path exists, the iteration will be done over the edges of the
