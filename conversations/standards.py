@@ -2,7 +2,7 @@
 # -*- coding: utf8 -*-
 
 # -----------------------------------------------------------------------------
-#   File: defaults.py (as part of project conversations)
+#   File: standards.py (as part of project conversations)
 #   Created: 08/07/2022 11:18
 #   Last Modified: 08/07/2022 11:18
 # -----------------------------------------------------------------------------
@@ -25,7 +25,6 @@ from typing import List, Optional
 
 from .Graph import Cost, Node
 from .Interactions import InteractionalSequence
-from .utils import flatten
 
 
 def standard_turn_transition_rules(candidate_node: Node, connected_node: Node,  # Obligatory argument
@@ -110,4 +109,5 @@ def standard_path_selection_rules(path_list: List[Cost], selection_key: List[str
     :return: best cost (as defined by the sorting function and the keys used)
     :rtype: Cost
     """
+    if not path_list: return path_list
     return sorted(path_list, reverse=True, key=attrgetter(*selection_key))[0]

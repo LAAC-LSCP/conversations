@@ -22,7 +22,7 @@ import os
 from glob import glob
 
 from conversations import Conversation
-from conversations.defaults import standard_filtering_rules, standard_turn_transition_rules, standard_path_selection_rules
+from conversations.standards import standard_filtering_rules, standard_turn_transition_rules, standard_path_selection_rules
 
 
 def main():
