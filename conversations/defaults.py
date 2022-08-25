@@ -28,10 +28,10 @@ from .Interactions import InteractionalSequence
 from .utils import flatten
 
 
-def default_turn_transition_rules(candidate_node: Node, connected_node: Node,  # Obligatory argument
-                                  target_participant: str,              # User-defined obligatory argument
-                                  interactants: Optional[List[str]] = None, allow_multi_unit_turns: bool = False,  # Optional arguments
-                                  allow_interactions_btw_interactants: bool = False, **kwargs) -> bool:
+def standard_turn_transition_rules(candidate_node: Node, connected_node: Node,  # Obligatory argument
+                                   target_participant: str,  # User-defined obligatory argument
+                                   interactants: Optional[List[str]] = None, allow_multi_unit_turns: bool = False,  # Optional arguments
+                                   allow_interactions_btw_interactants: bool = False, **kwargs) -> bool:
     """
     Returns whether the candidate node and the connected node should be considered as really connected or not.
     /!\ The names `candidate_node` and `connected_node` are fixed and cannot be changed!
@@ -81,7 +81,7 @@ def default_turn_transition_rules(candidate_node: Node, connected_node: Node,  #
     return False
 
 
-def default_filtering_rules(chain_sequences: List[InteractionalSequence], target_participant: str, **kwargs):
+def standard_filtering_rules(chain_sequences: List[InteractionalSequence], target_participant: str, **kwargs):
     """
     Filtering rule to exclude interactional sequences based on their properties
     :param chain_sequences: list of interactional sequences
@@ -100,7 +100,7 @@ def default_filtering_rules(chain_sequences: List[InteractionalSequence], target
     return chain_sequences
 
 
-def default_path_selection_rules(path_list: List[Cost], selection_key: List[str], **kwargs):
+def standard_path_selection_rules(path_list: List[Cost], selection_key: List[str], **kwargs):
     """
     Sorts a list of Cost and return the best
     :param path_list: list of costs

@@ -22,7 +22,7 @@ import os
 from glob import glob
 
 from conversations import Conversation
-from conversations.defaults import default_filtering_rules, default_turn_transition_rules, default_path_selection_rules
+from conversations.defaults import standard_filtering_rules, standard_turn_transition_rules, standard_path_selection_rules
 
 
 def main():
@@ -47,11 +47,11 @@ def main():
                                 selection_key=['num_turns', 'num_multi_turns_transitions'],
                                 # User-defined rules
                                     # Define how turns are allowed to take place
-                                turn_transition_rules=default_turn_transition_rules,
+                                turn_transition_rules=standard_turn_transition_rules,
                                     # Select one path amongst several
-                                best_path_selection_rules=default_path_selection_rules,
+                                best_path_selection_rules=standard_path_selection_rules,
                                     # Filter out interactional sequences
-                                filtering_rules=default_filtering_rules,)
+                                filtering_rules=standard_filtering_rules,)
 
     for file in files:
         print(file)
