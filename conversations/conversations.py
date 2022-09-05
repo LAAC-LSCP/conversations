@@ -256,7 +256,10 @@ class Conversation(object):
         self._filtering_rules = filtering_rules
         self._best_path_selection_rules = best_path_selection_rules
 
-        self._kwargs = kwargs # stores arguments to user-defined functions
+        self._kwargs = list(kwargs.keys()) # stores arguments to user-defined functions
+        # Add them as attributes in case they might be needed
+        for _kwargs_key, _kwargs_value in kwargs.items():
+            setattr(self, _kwargs_key, _kwargs_value)
     
     @property
     def allowed_gap(self) -> int:
@@ -347,6 +350,10 @@ class Conversation(object):
         :rtype: Callable
         """
         return self._best_path_selection_rules
+
+    @property
+    def user_defined_arguments(self):
+        return {kwargs_key: getattr(self, kwargs_key) for kwargs_key in self._kwargs}
 
     #
     #   I/O
@@ -664,7 +671,7 @@ class Conversation(object):
         interaction_graph = self._segments_to_graph(segments)
 
         # Find interactional sequences
-        connected_components = interaction_graph.get_connected_components(**self._kwargs)
+        connected_components = interaction_graph.get_connected_components(**self.user_defined_arguments)
 
         # Transform connected components edges to graph
         interactional_sequences = [InteractionalSequence(p) for p in connected_components]
@@ -673,10 +680,11 @@ class Conversation(object):
         if self.best_path_selection_rules:
             for inter_seq in interactional_sequences:
                 best_path = inter_seq._interactional_sequence.best_path(self.cost_type,
-                                                                        self.best_path_selection_rules, **self._kwargs)
+                                                                        self.best_path_selection_rules,
+                                                                        **self.user_defined_arguments)
                 inter_seq._best_path = DirectedGraph.from_tuple_list(best_path)
         # Filter out sequences
         if self.filtering_rules:
-            interactional_sequences = self.filtering_rules(interactional_sequences, **self._kwargs)
+            interactional_sequences = self.filtering_rules(interactional_sequences, **self.user_defined_arguments)
 
         return InteractionalSequences(data=data, interactional_sequences=interactional_sequences)
