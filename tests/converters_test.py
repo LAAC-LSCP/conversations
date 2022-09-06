@@ -6,6 +6,7 @@ Created on Thu Aug  4 12:57:39 2022
 @author: lpeurey
 """
 from conversations import Conversation
+from conversations.conversations import COLUMNS_REQUIRED
 
 from collections import defaultdict
 import pytest
@@ -31,8 +32,9 @@ def test_import_csv(conv, file, test):
     except Exception as e:
         caught = True    
     truth = pd.read_csv('tests/truth/df-csv.csv')
-    #res.to_csv('tests/truth/df-csv.csv',index=False)
-    if test == 'correct': pd.testing.assert_frame_equal(res.reset_index(drop=True), truth.reset_index(drop=True), check_like=True)
+    if test == 'correct':
+        #res.to_csv('tests/truth/2df-csv.csv', index=False) ###TMP
+        pd.testing.assert_frame_equal(res.reset_index(drop=True), truth.reset_index(drop=True), check_like=True)
     elif test == 'empty' : assert caught
     else : raise NotImplementedError('this test is not captured')
 
@@ -57,16 +59,20 @@ def test_import_rttm(conv,mapg,file,source,test):
         caught = True
     
     truth = pd.read_csv('tests/truth/df-rttm.csv')
+    truth.dropna(subset=COLUMNS_REQUIRED, inplace=True)
     truth_mapped = truth.copy()
     truth_mapped.speaker_type = truth_mapped.speaker_type.map(RTTM_MAP)
-    truth_mapped.dropna(inplace=True)
+    truth_mapped.dropna(subset=COLUMNS_REQUIRED, inplace=True)
     
-    if test == "mapping": pd.testing.assert_frame_equal(res.reset_index(drop=True), truth_mapped.reset_index(drop=True), check_like=True)
-    elif test == "vanilla": pd.testing.assert_frame_equal(res.reset_index(drop=True), truth.reset_index(drop=True), check_like=True)
+    if test == "mapping":
+        pd.testing.assert_frame_equal(res.reset_index(drop=True), truth_mapped.reset_index(drop=True), check_like=True)
+    elif test == "vanilla": 
+        res.to_csv('tests/truth/2df-rttm.csv', index=False) ###TMP
+        pd.testing.assert_frame_equal(res.reset_index(drop=True), truth.reset_index(drop=True), check_like=True)
     elif test == "no-dict" : assert caught
     elif test == 'source_file' : pd.testing.assert_frame_equal(res.reset_index(drop=True), truth.head(5).reset_index(drop=True), check_like=True)
     elif test == 'source_and_map' : pd.testing.assert_frame_equal(res.reset_index(drop=True), truth_mapped.head(3).reset_index(drop=True), check_like=True)
-    elif test == 'empty' : pd.testing.assert_frame_equal(res.reset_index(drop=True), pd.DataFrame(columns=['segment_onset','segment_offset', 'speaker_type']).reset_index(drop=True), check_like=True, check_dtype=False)
+    elif test == 'empty' : pd.testing.assert_frame_equal(res.reset_index(drop=True), pd.DataFrame(columns=['type', 'file', 'chnl', 'tbeg', 'tdur', 'ortho', 'stype', 'name','conf', 'slat', 'segment_onset', 'segment_offset', 'speaker_type']).reset_index(drop=True), check_like=True, check_dtype=False)
     else : raise NotImplementedError('this test is not captured')
 
 
