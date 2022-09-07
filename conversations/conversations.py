@@ -67,57 +67,81 @@ class InteractionalSequences(object):
         :rtype: pd.DataFrame
         """
 
-        segments = self._data
+        def append_column(is_idx, idx, col, payload):
+            pad = ','
+            if col == 'inter_seq_index' and segments.loc[idx, 'inter_seq_index'] != '':
+                if segments.loc[idx, 'inter_seq_index'].split(';')[-1] != str(is_idx):
+                    pad = ';'
+                else:
+                    if col == 'inter_seq_index':
+                        return
+
+            if col == 'conv_turn_index' and segments.loc[idx,col] != '':
+                if segments.loc[idx, col].split(';')[-1].split(',')[-1] == payload:
+                    return
+
+            prev_content = list(filter(lambda t: bool(t) if pad==',' else True, segments.loc[idx, col].split(pad)))
+            segments.loc[idx, col] = pad.join(prev_content + [payload])
+
+        segments = self._data.copy()
 
         # Set up output columns
+        segments['unit_index'] = segments.index
         segments['inter_seq_index'] = ''
         segments['conv_turn_index'] = ''
-        segments['inter_seq'] = ''
+        segments['fmt_inter_seq'] = ''
 
-        # These values only make sense if there is only a single path
-        segments['is_turn_transition'] = ''
-        segments['is_prompt'] = ''
-        segments['is_response'] = ''
+        # Store whether the node is a start or an end node
+        segments['is_start_unit'] = ''
+        segments['is_end_unit'] = ''
 
-        # Label interactional sequence and turns
-        flattened_interactional_sequences = list(map(lambda it: sorted(list(set(flatten(it))), key=attrgetter('index')),
-                                                     self.interactional_sequences))
+        # Store to which segment the segment is a prompt/response to
+        segments['is_prompt_to'] = ''
+        segments['is_response_to'] = ''
+        segments['is_self_prompt_to'] = ''
+        segments['is_self_response_to'] = ''
 
-        for index_is, interactional_sequence in enumerate(flattened_interactional_sequences, 1):
+        for index_is, interactional_sequence in enumerate(self.interactional_sequences, 1):
             # Concatenate old labelling with new labelling in case interactional chains were disconnected
-            for index_turn, segment in enumerate(interactional_sequence, 0):
-                index_segment = segment.index
+            indices = sorted(list(set(flatten(interactional_sequence))), key=attrgetter('index'))
 
-                prev_inter_seq_indices = list(filter(bool, segments.loc[index_segment, 'inter_seq_index'].split(',')))
-                prev_conv_turn_indices = list(filter(bool, segments.loc[index_segment, 'conv_turn_index'].split(',')))
+            for start_node, end_node in interactional_sequence:
+                is_turn_transition = start_node.speaker != end_node.speaker
+                is_multi_unit_transition = not(is_turn_transition)
 
-                # Is there a turn transition ?
-                current_speaker = segment.speaker
-                previous_speaker = interactional_sequence[index_turn-1].speaker if index_turn > 0 else None
-                next_speaker = interactional_sequence[index_turn+1].speaker if index_turn < len(interactional_sequence) - 1 else None
+                if is_turn_transition:
+                    append_column(index_is, start_node.index, 'is_prompt_to', str(end_node.index))
+                    append_column(index_is, end_node.index, 'is_response_to', str(start_node.index))
 
-                is_turn_transition = bool(previous_speaker) and previous_speaker != current_speaker
-                is_prompt = bool(next_speaker) and current_speaker != next_speaker
-                is_response = is_turn_transition
+                if is_multi_unit_transition:
+                    append_column(index_is, start_node.index, 'is_self_prompt_to', str(end_node.index))
+                    append_column(index_is, end_node.index, 'is_self_response_to', str(start_node.index))
 
-                segments.loc[index_segment, 'inter_seq_index'] = \
-                    ','.join(prev_inter_seq_indices+[str(index_is)])
-                segments.loc[index_segment, 'conv_turn_index'] = \
-                    ','.join(prev_conv_turn_indices+[str(index_turn+1)])
-                segments.loc[index_segment, 'is_turn_transition'] = \
-                    ','.join(prev_conv_turn_indices+[str(int(is_turn_transition))])
-                segments.loc[index_segment, 'is_prompt'] = \
-                    ','.join(prev_conv_turn_indices + [str(int(is_prompt))])
-                segments.loc[index_segment, 'is_response'] = \
-                    ','.join(prev_conv_turn_indices + [str(int(is_response))])
+
+                append_column(index_is, start_node.index, 'inter_seq_index', str(index_is))
+                append_column(index_is, start_node.index, 'conv_turn_index', str(indices.index(start_node)+1))
+                append_column(index_is, end_node.index, 'inter_seq_index', str(index_is))
+                append_column(index_is, end_node.index, 'conv_turn_index', str(indices.index(end_node) + 1))
+
+
+        segments['is_start_unit'] = segments.apply(axis=1, func=lambda row: (row['is_response_to'] == '' and
+                                                                       row['is_self_response_to'] == '')
+                                                                       if row['inter_seq_index'] != '' else '')
+
+        segments['is_end_unit'] = segments.apply(axis=1, func=lambda row: (row['is_prompt_to'] == '' and
+                                                                     row['is_self_prompt_to'] == '')
+                                                                     if row['inter_seq_index'] != '' else '')
 
         # Label conversational turns
-        segments['inter_seq'] = segments[['inter_seq_index', 'conv_turn_index']].apply(
+        segments['fmt_inter_seq'] = segments[['inter_seq_index', 'conv_turn_index']].apply(
             lambda row: '({}) '.format(str(row.name)) + ' '.join(
                         map(lambda items: '-'.join(items), zip(filter(bool, row['inter_seq_index'].split(',')),
                                                           filter(bool, row['conv_turn_index'].split(','))))),
             axis=1
         )
+
+        segments = segments.replace('', pd.NA)
+
         return segments
 
     def __get__(self, index) -> int:
@@ -156,7 +180,7 @@ class InteractionalSequences(object):
         :return: None
         :rtype: None
         """
-        self.to_dataframe().to_csv(filepath)
+        self.to_dataframe().to_csv(filepath, index=False)
 
     def to_chattr(self):
         raise NotImplementedError
