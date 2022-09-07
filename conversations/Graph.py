@@ -20,7 +20,6 @@
 
 import abc
 from itertools import chain, repeat
-from pprint import pprint
 from typing import Callable, List, Tuple, Set, Dict, Optional
 
 from .utils import pairwise
