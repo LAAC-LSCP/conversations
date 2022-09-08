@@ -310,7 +310,10 @@ class InteractionalSequence(object):
         return list(self.__iter__())[index]
 
     def __len__(self):
-        return len(list(self.__iter__()))
+        if self._best_path:
+            return len(self._best_path)
+        else:
+            return len(self._interactional_sequence)
 
     def __iter__(self):
         """

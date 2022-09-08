@@ -393,6 +393,7 @@ class Conversation(object):
         """
         # TODO: for CLI interface, allow user to drop lines based on condition
         df = pd.read_csv(filepath)
+        df = df.dropna(subset = COLUMNS_REQUIRED) #drop lines where there are NA values in the required columns
         assert COLUMNS_REQUIRED.issubset(df.columns)
         return df
 
@@ -450,6 +451,8 @@ class Conversation(object):
                 logging.warning(
                 "no lines found for source_file <{}> inside {},"
                 " resulting DataFrame is empty".format(source_file,filepath))
+                
+        df = df.dropna(subset = COLUMNS_REQUIRED) #drop lines where there are NA values in the required columns
         return df
     
     @classmethod
@@ -509,6 +512,7 @@ class Conversation(object):
                 )
 
         df = pd.DataFrame(segments, columns=['segment_onset','segment_offset', 'speaker_type'])
+        df = df.dropna(subset = COLUMNS_REQUIRED) #drop lines where there are NA values in the required columns
 
         return df
     
@@ -525,6 +529,7 @@ class Conversation(object):
         """
         # TODO: for CLI interface, allow user to drop lines based on condition
         df = pd.read_csv(filepath, sep='\t')
+        df = df.dropna(subset = COLUMNS_REQUIRED) #drop lines where there are NA values in the required columns
         assert COLUMNS_REQUIRED.issubset(df.columns)
 
         return df
@@ -563,6 +568,7 @@ class Conversation(object):
 
                 segments[aid] = segment
                 
+        df = df.dropna(subset = COLUMNS_REQUIRED) #drop lines where there are NA values in the required columns
         return pd.DataFrame(segments.values())
     
     
