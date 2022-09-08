@@ -22,17 +22,26 @@ from typing import List
 import pandas as pd
 
 
-def count_num_turn_transitions(df: pd.DataFrame, speakers: List, speaker_column:str):
+def count_num_turn_transitions(df: pd.DataFrame, speakers: List, speaker_column:str) -> int:
+    """
+    Return the number of turn transitions between two speakers
+    :param df: DataFrame of conversational interactions
+    :type df: pd.DataFrame
+    :param speakers:
+    :type speakers: List
+    :return: number of turn transitions
+    :rtype: int
+    """
     return len(get_turn_transitions_between_pair(df, speakers, speaker_column))
 
 
-def get_turn_transitions_between_pair(df: pd.DataFrame, speakers: List, speaker_column:str):
+def get_turn_transitions_between_pair(df: pd.DataFrame, speakers: List, speaker_column:str) -> pd.DataFrame:
     """
     Returns a DataFrame of turn transitions between two speakers.
     Each row should be interpreted as a turn transition between the segment `is_response_to` (corresponding to the index
     of the segment that constitutes the prompt) and the segment `unit_index`.
     /!\ This only works when a best path was found !
-    :param df:
+    :param df: DataFrame of conversational interactions
     :type df: pd.DataFrame
     :param speakers:
     :type speakers: List
