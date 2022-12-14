@@ -27,6 +27,11 @@ from .Graph import Cost, Node
 from .Interactions import InteractionalSequence
 
 
+standard_columns = {"col_segment_speaker": "speaker_type",
+                    "col_segment_onset": "segment_onset",
+                    "col_segment_offset": "segment_offset"}
+
+
 def standard_turn_transition_rules(candidate_node: Node, connected_node: Node,  # Obligatory argument
                                    target_participant: str,  # User-defined obligatory argument
                                    interactants: Optional[List[str]] = None, allow_multi_unit_turns: bool = False,  # Optional arguments

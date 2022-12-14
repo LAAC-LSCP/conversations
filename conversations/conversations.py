@@ -29,7 +29,6 @@ from typing import List, Union, Callable, Optional
 
 import pandas as pd
 
-COLUMNS_REQUIRED = {"segment_onset","segment_offset","speaker_type"}
 
 class InteractionalSequences(object):
     """
@@ -190,7 +189,12 @@ class Conversation(object):
     """
     Class defining the parameters of a conversation
     """
-    def __init__(self,  segment_type = Segment,
+    def __init__(self,  # Only default arguments that specify the names of the columns we are required to have
+                        col_segment_speaker,
+                        col_segment_onset,
+                        col_segment_offset,
+                        # Define segment and path cost objects
+                        segment_type = Segment,
                         cost_type = PathCost,
                         # Segment connectivity
                         allowed_gap: int = 1000, allowed_overlap: int = 0,
@@ -393,8 +397,7 @@ class Conversation(object):
         """
         # TODO: for CLI interface, allow user to drop lines based on condition
         df = pd.read_csv(filepath)
-        df = df.dropna(subset = COLUMNS_REQUIRED) #drop lines where there are NA values in the required columns
-        assert COLUMNS_REQUIRED.issubset(df.columns)
+
         return df
 
     @classmethod
@@ -451,8 +454,7 @@ class Conversation(object):
                 logging.warning(
                 "no lines found for source_file <{}> inside {},"
                 " resulting DataFrame is empty".format(source_file,filepath))
-                
-        df = df.dropna(subset = COLUMNS_REQUIRED) #drop lines where there are NA values in the required columns
+
         return df
     
     @classmethod
@@ -512,7 +514,6 @@ class Conversation(object):
                 )
 
         df = pd.DataFrame(segments, columns=['segment_onset','segment_offset', 'speaker_type'])
-        df = df.dropna(subset = COLUMNS_REQUIRED) #drop lines where there are NA values in the required columns
 
         return df
     
@@ -529,8 +530,6 @@ class Conversation(object):
         """
         # TODO: for CLI interface, allow user to drop lines based on condition
         df = pd.read_csv(filepath, sep='\t')
-        df = df.dropna(subset = COLUMNS_REQUIRED) #drop lines where there are NA values in the required columns
-        assert COLUMNS_REQUIRED.issubset(df.columns)
 
         return df
     
@@ -567,8 +566,7 @@ class Conversation(object):
                 }
 
                 segments[aid] = segment
-                
-        df = df.dropna(subset = COLUMNS_REQUIRED) #drop lines where there are NA values in the required columns
+
         return pd.DataFrame(segments.values())
     
     
