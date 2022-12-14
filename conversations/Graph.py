@@ -71,7 +71,7 @@ class DirectedGraph(Graph):
         self.adjacency = dict()
 
         # Define transition rules to go from one node to another
-        # By default, transitions are allowed from any node to another linked by and edge
+        # By default, transitions are allowed from any node to another linked by an edge
         self._transition_rules = lambda candidate_node, connected_node, **kwargs: True
 
         if transition_rules:
@@ -80,7 +80,7 @@ class DirectedGraph(Graph):
     @classmethod
     def from_tuple_list(cls, tuple_list: List[Tuple[Node, Node]]):
         """
-        Create a graph from a list of edges between nodes given as 2-tuple (start_node, end_node)
+        Create a graph from a list of edges between nodes given as 2-uple (start_node, end_node)
         :param tuple_list: list of tuples
         :type tuple_list: List[Tuple[Node, Node]]
         :return: a graph
@@ -327,7 +327,8 @@ class DirectedGraph(Graph):
                     # Choose the best according to the user definition
                     current_path_cost = selection_rule([prev_path_cost, outgoing_node_cost], **kwargs) \
                                         if prev_path_cost else outgoing_node_cost
-                    selected_cost_prev_node = (current_path_cost, prev_path_incoming if current_path_cost == prev_path_cost else incoming_node)
+                    selected_cost_prev_node = (current_path_cost, prev_path_incoming
+                                               if current_path_cost == prev_path_cost else incoming_node)
                     # Set the new cost and corresponding previous node
                     self.adjacency[outgoing_node]['cost'][outgoing_node_cost.ancestor] = selected_cost_prev_node
             next_nodes_to_visit.extend(next_node_pairs)
