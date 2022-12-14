@@ -21,9 +21,12 @@ import logging
 import re
 from operator import attrgetter
 
-from .Graph import DirectedGraph
-from .Interactions import InteractionalSequence, Segment, PathCost
-from .utils import flatten, overlaps
+from conversations.Graph import DirectedGraph
+from conversations.InteractionalSequence import InteractionalSequence
+from conversations.PathCost import PathCost
+from conversations.Segment import Segment
+from conversations.data_importers import from_eaf, from_csv, from_txt, from_rttm, from_its
+from conversations.utils import flatten, overlaps
 
 from typing import List, Union, Callable, Optional
 
@@ -265,6 +268,10 @@ class Conversation(object):
             assert lx_col and type(lx_only) != str, \
                 ValueError('Specify which column should be used to assert linguitic type using lx_col parameter.')
 
+        self.col_segment_speaker = col_segment_speaker
+        self.col_segment_onset = col_segment_onset
+        self.col_segment_offset = col_segment_offset
+
         self.segment_type =  segment_type
         self.cost_type = cost_type
 
@@ -395,10 +402,7 @@ class Conversation(object):
         :return: pandas DataFrame
         :rtype: pd.DataFrame
         """
-        # TODO: for CLI interface, allow user to drop lines based on condition
-        df = pd.read_csv(filepath)
-
-        return df
+        return from_csv(filepath)
 
     @classmethod
     def from_rttm(cls, filepath, name_mapping=None, source_file:str = None):
@@ -413,49 +417,7 @@ class Conversation(object):
         :return: pandas DataFrame
         :rtype: pd.DataFrame
         """
-        df = pd.read_csv(
-            filepath,
-            sep=" ",
-            names=[
-                "type",
-                "file",
-                "chnl",
-                "tbeg",
-                "tdur",
-                "ortho",
-                "stype",
-                "name",
-                "conf",
-                "slat",
-            ],
-        )
-        n_recordings = len(df["file"].unique())
-        if  n_recordings > 1 and not source_file:
-            logging.warning(
-                "WARNING: {} contains annotations from {} different audio files, but no source_file was specified, "
-                "all annotations will be imported as if they belonged to the same recording. "
-                "Please make sure this is the intended behavior ".format(filepath,n_recordings)
-            )
-        df["segment_onset"] = df["tbeg"].mul(1000).round().astype(int)
-        df["segment_offset"] = (df["tbeg"] + df["tdur"]).mul(1000).round().astype(int)
-        if name_mapping:
-            assert isinstance(name_mapping, dict), \
-                "keyword argument <name_mapping> should be a dictionary, found <{}>".format(type(name_mapping))
-            df["speaker_type"] = df["name"].map(name_mapping)
-        else:
-            df["speaker_type"] = df["name"]
-
-        if not df.shape[0]:
-            logging.warning(
-                "no lines found for inside {}, resulting DataFrame is empty".format(filepath))
-        elif source_file:
-            df = df[df["file"] == source_file]
-            if not df.shape[0]:
-                logging.warning(
-                "no lines found for source_file <{}> inside {},"
-                " resulting DataFrame is empty".format(source_file,filepath))
-
-        return df
+        return from_rttm(filepath, name_mapping, source_file)
     
     @classmethod
     def from_its(cls, filepath, speaker_mapping = None, recording_num = None) -> pd.DataFrame:
@@ -468,54 +430,7 @@ class Conversation(object):
         :return: pandas DataFrame
         :rtype: pd.DataFrame
         """
-        from lxml import etree
-
-        xml = etree.parse(filepath)
-
-        recordings = xml.xpath(
-            "/ITS/ProcessingUnit/Recording"
-            + ('[@num="{}"]'.format(recording_num) if recording_num else "")
-        )
-        timestamp_pattern = re.compile(r"^P(?:T?)(\d+(\.\d+)?)S$")
-
-        def extract_from_regex(pattern, subject):
-            match = pattern.search(subject)
-            return match.group(1) if match else ""
-
-        segments = []
-        if len(recordings) > 1 and not recording_num:
-            logging.warning(
-                "WARNING: {} contains annotations from {} assembled recordings. "
-                "No recording_num was specified so all annotations will be imported together.".format(filepath,len(recordings))
-            )
-        if recording_num and recording_num > len(recordings):
-            logging.warning(
-                "WARNING: file {} : recording_num {} does not exist. "
-                "Returning empty DataFrame".format(filepath,recording_num,len(recordings))
-            )
-
-        for recording in recordings:
-            segs = recording.xpath("./Pause/Segment|./Conversation/Segment")
-            for seg in segs:
-
-                onset = float(
-                    extract_from_regex(timestamp_pattern, seg.get("startTime"))
-                )
-                offset = float(
-                    extract_from_regex(timestamp_pattern, seg.get("endTime"))
-                )
-
-                segments.append(
-                    {
-                        "segment_onset": int(round(onset * 1000)),
-                        "segment_offset": int(round(offset * 1000)),
-                        "speaker_type": speaker_mapping[seg.get("spkr")] if speaker_mapping else seg.get("spkr"),
-                    }
-                )
-
-        df = pd.DataFrame(segments, columns=['segment_onset','segment_offset', 'speaker_type'])
-
-        return df
+        return from_its(filepath, speaker_mapping, recording_num)
     
     @classmethod
     def from_txt(cls, filepath) -> pd.DataFrame:
@@ -528,10 +443,7 @@ class Conversation(object):
         :return: pandas DataFrame
         :rtype: pd.DataFrame
         """
-        # TODO: for CLI interface, allow user to drop lines based on condition
-        df = pd.read_csv(filepath, sep='\t')
-
-        return df
+        return from_txt(filepath)
     
     @classmethod
     def from_eaf(cls, filepath) -> pd.DataFrame:
@@ -543,31 +455,7 @@ class Conversation(object):
         :return: pandas DataFrame
         :rtype: pd.DataFrame
         """
-        #
-        #TODO handle tiers in more depth, perhaps remove subtiers? Perhaps remove some tiers based on the name?
-        # Perhaps map tier names to normalized speaker_type?
-        #
-        import pympi
-
-        eaf = pympi.Elan.Eaf(filepath)
-        segments = {}
-        
-        for tier_name in eaf.tiers:
-            annotations = eaf.tiers[tier_name][0]
-            
-            for aid in annotations:
-                (start_ts, end_ts, value, svg_ref) = annotations[aid]
-                (start_t, end_t) = (eaf.timeslots[start_ts], eaf.timeslots[end_ts])
-
-                segment = {
-                    "segment_onset": int(round(start_t)),
-                    "segment_offset": int(round(end_t)),
-                    "speaker_type": tier_name,
-                }
-
-                segments[aid] = segment
-
-        return pd.DataFrame(segments.values())
+        return from_eaf(filepath)
     
     
     #

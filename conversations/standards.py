@@ -24,7 +24,7 @@ from operator import attrgetter
 from typing import List, Optional
 
 from .Graph import Cost, Node
-from .Interactions import InteractionalSequence
+from .InteractionalSequence import InteractionalSequence
 
 
 standard_columns = {"col_segment_speaker": "speaker_type",
