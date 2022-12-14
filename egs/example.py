@@ -22,7 +22,12 @@ import os
 from glob import glob
 
 from conversations import Conversation
-from conversations.standards import standard_filtering_rules, standard_turn_transition_rules, standard_path_selection_rules
+from conversations.standards import (
+    standard_filtering_rules,
+    standard_turn_transition_rules,
+    standard_path_selection_rules,
+    standard_columns
+)
 
 
 def main():
@@ -36,7 +41,8 @@ def main():
     files = [f for f in os.listdir(root_path) if f.endswith('.csv')]
 
     # Define what a conversation is
-    conversation = Conversation(# Participants
+    conversation = Conversation(**standard_columns,
+                                # Participants
                                 target_participant='CHI',
                                 # Connectivity
                                 allowed_gap=1000,
