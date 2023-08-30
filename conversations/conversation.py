@@ -2,7 +2,7 @@
 # -*- coding: utf8 -*-
 
 # -----------------------------------------------------------------------------
-#   File: conversations.py (as part of project conversations)
+#   File: conversation.py (as part of project conversations)
 #   Created: 03/06/2022 17:13
 #   Last Modified: 03/06/2022 17:13
 # -----------------------------------------------------------------------------
@@ -17,175 +17,19 @@
 #   Description:
 #       •
 # -----------------------------------------------------------------------------
-import logging
-import re
-from operator import attrgetter
 
-from conversations.Graph import DirectedGraph
+from conversations.graph.base.DirectedGraph import DirectedGraph
 from conversations.InteractionalSequence import InteractionalSequence
-from conversations.PathCost import PathCost
-from conversations.Segment import Segment
-from conversations.data_importers import from_eaf, from_csv, from_txt, from_rttm, from_its
-from conversations.utils import flatten, overlaps
+from conversations.InteractionalSequences import InteractionalSequences
+from conversations.graph.conv.ConvCost import ConvCost
+from conversations.graph.conv.Segment import Segment
+from conversations.converters import from_eaf, from_csv, from_txt, from_rttm, from_its
+from conversations.utils import overlaps
 
-from typing import List, Union, Callable, Optional
+from typing import Union, Callable, Optional
 
 import pandas as pd
 
-
-class InteractionalSequences(object):
-    """
-    Class used to store all the interactional sequences found for a specific
-    """
-    def __init__(self, data: pd.DataFrame, interactional_sequences: List[InteractionalSequence]):
-        """
-        Initiator
-        :param data: original data frame containing the segmend
-        :type data: pd.DataFrame
-        :param interactional_sequences: list of interactional sequences correspond to the input data
-        :type interactional_sequences: List[InteractionalSequence]
-        """
-        self._data = data
-        self._interactional_sequences = interactional_sequences
-
-    @property
-    def interactional_sequences(self):
-        """
-        Returns the interactional sequences
-        :return: list of interactional sequences
-        :rtype: List[InteractionalSequence]
-        """
-        return self._interactional_sequences
-
-    def to_dataframe(self):
-        """
-        Save the interactional sequences found for the given input data. Three additional columns are added to the
-        original data frame:
-            - `inter_seq_index` is the index of the interactional sequence the given segment belongs to
-            - 'conv_turn_index' is the index of the segment inside the interactional sequence
-            - 'inter_seq' merges the segment index, its inter_seq_index and conv_turn_index into one string
-              (which is useful, for example, when loading the data into ELAN)
-        :return: dataframe
-        :rtype: pd.DataFrame
-        """
-
-        def append_column(is_idx, idx, col, payload):
-            pad = ','
-            if col == 'inter_seq_index' and segments.loc[idx, 'inter_seq_index'] != '':
-                if segments.loc[idx, 'inter_seq_index'].split(';')[-1] != str(is_idx):
-                    pad = ';'
-                else:
-                    if col == 'inter_seq_index':
-                        return
-
-            if col == 'conv_turn_index' and segments.loc[idx,col] != '':
-                if segments.loc[idx, col].split(';')[-1].split(',')[-1] == payload:
-                    return
-
-            prev_content = list(filter(lambda t: bool(t) if pad==',' else True, segments.loc[idx, col].split(pad)))
-            segments.loc[idx, col] = pad.join(prev_content + [payload])
-
-        segments = self._data.copy()
-
-        # Set up output columns
-        segments['unit_index'] = segments.index
-        segments['inter_seq_index'] = ''
-        segments['conv_turn_index'] = ''
-        segments['fmt_inter_seq'] = ''
-
-        # Store whether the node is a start or an end node
-        segments['is_start_unit'] = ''
-        segments['is_end_unit'] = ''
-
-        # Store to which segment the segment is a prompt/response to
-        segments['is_prompt_to'] = ''
-        segments['is_response_to'] = ''
-        segments['is_self_prompt_to'] = ''
-        segments['is_self_response_to'] = ''
-
-        for index_is, interactional_sequence in enumerate(self.interactional_sequences, 1):
-            # Concatenate old labelling with new labelling in case interactional chains were disconnected
-            indices = sorted(list(set(flatten(interactional_sequence))), key=attrgetter('index'))
-
-            for start_node, end_node in interactional_sequence:
-                is_turn_transition = start_node.speaker != end_node.speaker
-                is_multi_unit_transition = not(is_turn_transition)
-
-                if is_turn_transition:
-                    append_column(index_is, start_node.index, 'is_prompt_to', str(end_node.index))
-                    append_column(index_is, end_node.index, 'is_response_to', str(start_node.index))
-
-                if is_multi_unit_transition:
-                    append_column(index_is, start_node.index, 'is_self_prompt_to', str(end_node.index))
-                    append_column(index_is, end_node.index, 'is_self_response_to', str(start_node.index))
-
-
-                append_column(index_is, start_node.index, 'inter_seq_index', str(index_is))
-                append_column(index_is, start_node.index, 'conv_turn_index', str(indices.index(start_node)+1))
-                append_column(index_is, end_node.index, 'inter_seq_index', str(index_is))
-                append_column(index_is, end_node.index, 'conv_turn_index', str(indices.index(end_node) + 1))
-
-
-        segments['is_start_unit'] = segments.apply(axis=1, func=lambda row: (row['is_response_to'] == '' and
-                                                                       row['is_self_response_to'] == '')
-                                                                       if row['inter_seq_index'] != '' else '')
-
-        segments['is_end_unit'] = segments.apply(axis=1, func=lambda row: (row['is_prompt_to'] == '' and
-                                                                     row['is_self_prompt_to'] == '')
-                                                                     if row['inter_seq_index'] != '' else '')
-
-        # Label conversational turns
-        segments['fmt_inter_seq'] = segments[['inter_seq_index', 'conv_turn_index']].apply(
-            lambda row: '({}) '.format(str(row.name)) + ' '.join(
-                        map(lambda items: '-'.join(items), zip(filter(bool, row['inter_seq_index'].split(',')),
-                                                          filter(bool, row['conv_turn_index'].split(','))))),
-            axis=1
-        )
-
-        segments = segments.replace('', pd.NA)
-
-        return segments
-
-    def __get__(self, index) -> int:
-        """
-        Returns the interactional sequence at the given index
-        :param index: index
-        :type index: int
-        :return: interactional sequence
-        :rtype: InteractionalSequence
-        """
-        return self._interactional_sequences[index]
-
-    def __iter__(self) -> Optional[InteractionalSequence]:
-        """
-        Iterates over the interactional sequence of a file
-        :return: interactional sequence
-        :rtype: Optional[InteractionalSequence]
-        """
-        for interactional_sequence in self._interactional_sequences:
-            yield interactional_sequence
-        return
-
-    def __len__(self) -> int:
-        """
-        Returns the number of interactional sequence found
-        :return: number of interactional sequence
-        :rtype: int
-        """
-        return len(self._interactional_sequences)
-
-    def to_csv(self, filepath) -> None:
-        """
-        Saves the interactional sequence to a CSV file. For more information on the format used, see `to_dataframe`
-        :param filepath: path where the file will be saved
-        :type filepath: str
-        :return: None
-        :rtype: None
-        """
-        self.to_dataframe().to_csv(filepath, index=False)
-
-    def to_chattr(self):
-        raise NotImplementedError
 
 
 class Conversation(object):
@@ -193,23 +37,23 @@ class Conversation(object):
     Class defining the parameters of a conversation
     """
     def __init__(self,  # Only default arguments that specify the names of the columns we are required to have
-                        col_segment_speaker,
-                        col_segment_onset,
-                        col_segment_offset,
-                        # Define segment and path cost objects
-                        segment_type = Segment,
-                        cost_type = PathCost,
-                        # Segment connectivity
-                        allowed_gap: int = 1000, allowed_overlap: int = 0,
-                        allow_segment_jump: bool = False,
-                        # Filtering
-                        min_utt_dur: int = 0, max_utt_dur: int = 0,
-                        lx_only: Union[bool, str] = False, lx_col: Optional[str] = None,
-                        # Transitions and filtering rules
-                        turn_transition_rules: Optional[Callable] = None,
-                        best_path_selection_rules: Optional[Callable] = None,
-                        filtering_rules: Optional[Callable] = None,
-                        **kwargs, # Used to pass arguments to user-defined functions
+                 col_segment_speaker,
+                 col_segment_onset,
+                 col_segment_offset,
+                 # Define segment and path cost objects
+                 segment_type = Segment,
+                 cost_type = ConvCost,
+                 # Segment connectivity
+                 allowed_gap: int = 1000, allowed_overlap: int = 0,
+                 allow_segment_jump: bool = False,
+                 # Filtering
+                 min_utt_dur: int = 0, max_utt_dur: int = 0,
+                 lx_only: Union[bool, str] = False, lx_col: Optional[str] = None,
+                 # Transitions and filtering rules
+                 turn_transition_rules: Optional[Callable] = None,
+                 best_path_selection_rules: Optional[Callable] = None,
+                 filtering_rules: Optional[Callable] = None,
+                 **kwargs,  # Used to pass arguments to user-defined functions
                  ):
         """
         Initialisator
@@ -440,7 +284,7 @@ class Conversation(object):
         The three columns must be speaker_type , segment_onset , segment_offset
         :param filepath: path to the txt file to be read
         :type filepath: str
-        :return: pandas DataFrame
+        :return: pandas DataFrameconversations
         :rtype: pd.DataFrame
         """
         return from_txt(filepath)
@@ -470,7 +314,7 @@ class Conversation(object):
         :rtype: pd.DataFrame
         """
         # Remove segments based on duration
-        segments['segment_duration'] = (segments['segment_offset'] - segments['segment_onset'])
+        segments['segment_duration'] = (segments[self.col_segment_offset] - segments[self.col_segment_onset])
         segments = segments[segments['segment_duration'] > self.min_utt_dur]
         segments = segments[segments['segment_duration'] < self.max_utt_dur] if self.max_utt_dur > 0 else segments
 
@@ -502,8 +346,8 @@ class Conversation(object):
         """
         # Build node for each segment
         segments['node'] = segments.apply(axis=1, func=lambda row:
-                self.segment_type(index=row.name, speaker=row['speaker_type'],
-                                  onset=row['segment_onset'], offset=row['segment_offset'], **row))
+                self.segment_type(index=row.name, speaker=row[self.col_segment_speaker],
+                                  onset=row[self.col_segment_onset], offset=row[self.col_segment_offset], **row))
         return segments
 
     def _find_connected_nodes(self, segments) -> pd.DataFrame:
@@ -521,10 +365,10 @@ class Conversation(object):
                 func=lambda t_row: segments[
                     segments.apply(axis=1,
                                       # Get overlapping segments
-                        func=lambda c_row: (overlaps(c_row['segment_onset'], c_row['segment_offset'],
-                                                t_row['segment_onset'], t_row['segment_offset'] + self.allowed_gap))
+                        func=lambda c_row: (overlaps(c_row[self.col_segment_onset], c_row[self.col_segment_offset],
+                                                t_row[self.col_segment_onset], t_row[self.col_segment_offset] + self.allowed_gap))
                                       # only look after. /!\ only use > and not >= as it might create cycles
-                                      and c_row['segment_onset'] > t_row['segment_onset']
+                                      and c_row[self.col_segment_onset] > t_row[self.col_segment_onset]
                                       # Remove identical segments
                                       and t_row.name != c_row.name)
                 ])
@@ -534,9 +378,9 @@ class Conversation(object):
             # Target    |            |----------|
             # Candidate |               |---Keep---| |--Remove--|
             segments['connected_nodes'] = segments['connected_nodes'].apply(
-                func=lambda df: (df.groupby('speaker_type')
+                func=lambda df: (df.groupby(self.col_segment_speaker)
                                 # Keep only the first segment for each candidate speaker
-                                .apply(lambda rows: (rows.sort_values(by='segment_onset', ascending=True)
+                                .apply(lambda rows: (rows.sort_values(by=self.col_segment_onset, ascending=True)
                                                     .head(n=1)))
                                 # Remove multi-indexing and keep original index
                                 .apply(lambda rows: rows if not rows.index.nlevels > 1
@@ -564,7 +408,7 @@ class Conversation(object):
                 interaction_graph.add_edge(parent, connected_node)
         return interaction_graph
 
-    def get_interactional_sequences(self, data) -> InteractionalSequences:
+    def find_interactional_sequences(self, data) -> InteractionalSequences:
         """
         Finds interactional sequences for the input data given the current conversational settings
         :param data: data frame of segments

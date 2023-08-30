@@ -1,10 +1,10 @@
 #!usr/bin/env python
 # -*- coding: utf8 -*-
-
+#
 # -----------------------------------------------------------------------------
-#   File: __init__.py (as part of project conversations)
-#   Created: 29/06/2022 11:15
-#   Last Modified: 29/06/2022 11:15
+#   File: Node.py (as part of project conversations)
+#   Created: 21/03/2023 14:11
+#   Last Modified: 21/03/2023 14:11
 # -----------------------------------------------------------------------------
 #   Author: William N. Havard
 #           Postdoctoral Researcher
@@ -18,6 +18,12 @@
 #       • 
 # -----------------------------------------------------------------------------
 
-__version__ = "0.1.0"
-__author__ = 'William N. Havard'
-__credits__ = 'Laboratoire de Sciences Cognitives et Psycholinguistique (LSCP), ENS/CNRS/INRIA/EHESS, Paris, France'
+import abc
+
+class Node(abc.ABC):
+    """
+    Abstract class used for a Node in graph
+    """
+    @abc.abstractmethod
+    def __init__(self):
+        pass

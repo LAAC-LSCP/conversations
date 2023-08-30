@@ -10,7 +10,7 @@ import random
 import numpy as np
 import time
 
-from conversations.conversations import Conversation
+from conversations.conversation import Conversation
 
 np.random.seed(2424) #usage of a seed allows for consistency in generated dataframes
 onsets = np.random.randint(10e5, size=1000) #generate random onsets, maximum being 10e5 (so this represents an audio of ~1000s so around 17min)

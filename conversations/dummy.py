@@ -1,10 +1,10 @@
 #!usr/bin/env python
 # -*- coding: utf8 -*-
-
+#
 # -----------------------------------------------------------------------------
-#   File: __init__.py (as part of project conversations)
-#   Created: 29/06/2022 11:15
-#   Last Modified: 29/06/2022 11:15
+#   File: dummy.py (as part of project conversations)
+#   Created: 28/04/2023 15:11
+#   Last Modified: 28/04/2023 15:11
 # -----------------------------------------------------------------------------
 #   Author: William N. Havard
 #           Postdoctoral Researcher
@@ -17,7 +17,17 @@
 #   Description: 
 #       • 
 # -----------------------------------------------------------------------------
+from pprint import pprint
 
-__version__ = "0.1.0"
-__author__ = 'William N. Havard'
-__credits__ = 'Laboratoire de Sciences Cognitives et Psycholinguistique (LSCP), ENS/CNRS/INRIA/EHESS, Paris, France'
+from conversations.standards import register_user_function, argument, user_defined_functions, standard_filtering_rules
+
+@register_user_function(
+    argument('--bar')
+)
+def bar(foo):
+    print(foo)
+
+for func in user_defined_functions.items():
+    print(func)
+
+standard_filtering_rules()

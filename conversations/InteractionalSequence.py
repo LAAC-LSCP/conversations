@@ -20,7 +20,7 @@
 
 import os
 
-from .Graph import DirectedGraph
+from conversations.graph.base.DirectedGraph import DirectedGraph
 
 class InteractionalSequence(object):
     """
@@ -35,6 +35,15 @@ class InteractionalSequence(object):
         super().__init__()
 
         self._interactional_sequence = interactional_sequence
+        self._best_path = None
+
+    def find_best_path(self, cost_type, selection_rules, user_defined_arguments):
+        best_path = self._interactional_sequence.best_path(cost_type,
+                                                           selection_rules,
+                                                           user_defined_arguments)
+        self._best_path = DirectedGraph.from_tuple_list(best_path)
+
+    def reset_best_path(self):
         self._best_path = None
 
     def source(self, raw_with_best_path=True) -> str:
@@ -84,12 +93,12 @@ class InteractionalSequence(object):
         :return: graphviz Digraph object
         :rtype: graphviz.Digraph
         """
-        from .graph_visualisation import generate_interactional_sequence_visualisation
+        from conversations.graph.conv.plotter import plot
         if raw_with_best_path and self._best_path:
-            return generate_interactional_sequence_visualisation(list(self._interactional_sequence),
-                                                                 highlight_edges=list(self._best_path))
+            return plot(list(self._interactional_sequence),
+                        highlight_edges=list(self._best_path))
         else:
-            return generate_interactional_sequence_visualisation(list(self))
+            return plot(list(self))
 
     def __getitem__(self, index):
         return list(self.__iter__())[index]

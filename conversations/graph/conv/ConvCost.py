@@ -2,7 +2,7 @@
 # -*- coding: utf8 -*-
 #
 # -----------------------------------------------------------------------------
-#   File: PathCost.py (as part of project conversations)
+#   File: ConvCost.py (as part of project conversations)
 #   Created: 14/12/2022 16:14
 #   Last Modified: 14/12/2022 16:14
 # -----------------------------------------------------------------------------
@@ -17,13 +17,28 @@
 #   Description: 
 #       • 
 # -----------------------------------------------------------------------------
+
 from copy import deepcopy
+from functools import wraps
 
-from conversations.Graph import Cost, Node
-from conversations.Segment import Segment
+from conversations.graph.base.Cost import Cost
+from conversations.graph.base.Node import Node
+from conversations.graph.conv.Segment import Segment
 
+costs = {}
 
-class PathCost(Cost):
+def register_cost(*args, **kwargs):
+    def decorated(cls):
+        costs[cls.__name__] = cls
+
+        @wraps(cls)
+        def wrapper():
+            return cls(*args, **kwargs)
+        return wrapper
+    return decorated
+
+@register_cost
+class ConvCost(Cost):
     """
     Class use to compute the score of a given path
     """
@@ -33,7 +48,8 @@ class PathCost(Cost):
         :param segment: Segment used as first node
         :type segment: Segment
         """
-        self._ancestor = segment
+        super(ConvCost, self).__init__(segment)
+
         self._speakers = [segment.speaker]
         self._duration = segment.duration
         self._turn_transitions = 0
@@ -108,9 +124,9 @@ class PathCost(Cost):
         :param other: segment
         :type other: Segment
         :return: new PathCost object with an updated value
-        :rtype: PathCost
+        :rtype: ConvCost
         """
-        assert isinstance(other, Node), ValueError('Can only add Node (or inherited) to PathCost!')
+        assert isinstance(other, Node), ValueError('Can only add Node (or inherited) to ConvCost!')
 
         # Create fresh copy
         new_cost = deepcopy(self)

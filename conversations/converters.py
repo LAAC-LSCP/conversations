@@ -2,7 +2,7 @@
 # -*- coding: utf8 -*-
 #
 # -----------------------------------------------------------------------------
-#   File: data_importers.py (as part of project conversations)
+#   File: converters.py (as part of project conversations)
 #   Created: 14/12/2022 16:27
 #   Last Modified: 14/12/2022 16:27
 # -----------------------------------------------------------------------------
@@ -18,6 +18,7 @@
 #       • 
 # -----------------------------------------------------------------------------
 
+import re
 import pandas as pd
 import logging
 
@@ -36,7 +37,7 @@ def from_csv(filepath) -> pd.DataFrame:
     return df
 
 
-def from_rttm(cls, filepath, name_mapping=None, source_file: str = None):
+def from_rttm(filepath, name_mapping=None, source_file: str = None):
     """
     Reads a RTTM file and return a data frame with columns {"segment_onset","segment_offset","speaker_type"}
     :param filepath: path to the RTTM file to be read

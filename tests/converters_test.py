@@ -6,8 +6,7 @@ Created on Thu Aug  4 12:57:39 2022
 @author: lpeurey
 """
 from conversations import Conversation
-from conversations.conversations import COLUMNS_REQUIRED
-
+from conversations.standards import standard_columns
 from collections import defaultdict
 import pytest
 import pandas as pd
@@ -20,7 +19,7 @@ EMPTY_FILE = 'tests/data/empty_file'
 
 @pytest.fixture()
 def conv():
-    return Conversation()
+    return Conversation(**standard_columns)
 
 @pytest.mark.parametrize("file,test", [
        (CSV_INPUT,'correct'),
@@ -59,10 +58,8 @@ def test_import_rttm(conv,mapg,file,source,test):
         caught = True
     
     truth = pd.read_csv('tests/truth/df-rttm.csv')
-    truth.dropna(subset=COLUMNS_REQUIRED, inplace=True)
     truth_mapped = truth.copy()
     truth_mapped.speaker_type = truth_mapped.speaker_type.map(RTTM_MAP)
-    truth_mapped.dropna(subset=COLUMNS_REQUIRED, inplace=True)
     
     if test == "mapping":
         pd.testing.assert_frame_equal(res.reset_index(drop=True), truth_mapped.reset_index(drop=True), check_like=True)

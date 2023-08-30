@@ -21,12 +21,11 @@
 import os
 from glob import glob
 
-from conversations import Conversation
+from conversations.conversation import Conversation
 from conversations.standards import (
     standard_filtering_rules,
     standard_turn_transition_rules,
     standard_path_selection_rules,
-    standard_columns
 )
 
 
@@ -41,7 +40,9 @@ def main():
     files = [f for f in os.listdir(root_path) if f.endswith('.csv')]
 
     # Define what a conversation is
-    conversation = Conversation(**standard_columns,
+    conversation = Conversation(col_segment_speaker = "speaker_type",
+                                col_segment_onset = "segment_onset",
+                                col_segment_offset = "segment_offset",
                                 # Participants
                                 target_participant='CHI',
                                 # Connectivity
@@ -67,7 +68,7 @@ def main():
         data = data[~data['speaker_type'].isnull()]  # Remove empty lines
 
         # Retrieve interactional sequences
-        interactional_sequences = conversation.get_interactional_sequences(data)
+        interactional_sequences = conversation.find_interactional_sequences(data)
 
         # Iterate over all interactional sequences found
         for idx, interactional_sequence in enumerate(interactional_sequences):

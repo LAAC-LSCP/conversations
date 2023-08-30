@@ -1,6 +1,6 @@
 #!usr/bin/env python
 # -*- coding: utf8 -*-
-
+from functools import wraps
 # -----------------------------------------------------------------------------
 #   File: standards.py (as part of project conversations)
 #   Created: 08/07/2022 11:18
@@ -23,19 +23,52 @@ from itertools import chain
 from operator import attrgetter
 from typing import List, Optional
 
-from .Graph import Cost, Node
-from .InteractionalSequence import InteractionalSequence
+from conversations.graph.base.Graph import Node
+from conversations.graph.base.Cost import Cost
+from conversations.InteractionalSequence import InteractionalSequence
 
 
-standard_columns = {"col_segment_speaker": "speaker_type",
-                    "col_segment_onset": "segment_onset",
-                    "col_segment_offset": "segment_offset"}
+user_defined_functions = {}
+
+def argument(*name_or_flags, **kwargs):
+    return (list(name_or_flags), kwargs)
 
 
+def register_user_function(*parser_args):
+    def decorated(func):
+        user_defined_functions[func.__name__] = {
+            'args': parser_args,
+            'func': func,
+        }
+
+        @wraps(func)
+        def wrapper(*args, **kwargs):
+            return func(*args, **kwargs)
+        return wrapper
+    return decorated
+
+
+@register_user_function(
+    argument('--target-participant',
+             required=True,
+             help="Which speaker should be considered the target participant."),
+    argument('--interactants',
+             required=False,
+             nargs="*",
+             help="List of interactants to consider."),
+    argument('--allow-multi-unit-turns',
+             required=False,
+             type=bool,
+             help="Signal whether multi-turns unit are allowed or not."),
+    argument('--allow-interaction-btw-interactants',
+             required=False,
+             type=bool,
+             help="Signal whether interactants are allowed to interact between one another.")
+)
 def standard_turn_transition_rules(candidate_node: Node, connected_node: Node,  # Obligatory argument
                                    target_participant: str,  # User-defined obligatory argument
                                    interactants: Optional[List[str]] = None, allow_multi_unit_turns: bool = False,  # Optional arguments
-                                   allow_interactions_btw_interactants: bool = False, **kwargs) -> bool:
+                                   allow_interactions_btw_interactants: bool = False) -> bool:
     """
     Returns whether the candidate node and the connected node should be considered as really connected or not.
     /!\ The names `candidate_node` and `connected_node` are fixed and cannot be changed!
@@ -53,8 +86,6 @@ def standard_turn_transition_rules(candidate_node: Node, connected_node: Node,  
     :type allow_multi_unit_turns: bool
     :param allow_interactions_btw_interactants: whether interactants are allowed to interact between one another
     :type allow_interactions_btw_interactants: bool
-    :param kwargs: other user-defined keyword arguments not used in this function
-    :type kwargs: dict
     :return: whether two segments should be considered connected or not
     :rtype: bool
     """
@@ -85,15 +116,18 @@ def standard_turn_transition_rules(candidate_node: Node, connected_node: Node,  
     return False
 
 
-def standard_filtering_rules(chain_sequences: List[InteractionalSequence], target_participant: str, **kwargs):
+@register_user_function(
+    argument('--target-participant',
+             required=True,
+             help='Which speaker should be considered the target participant.')
+)
+def standard_filtering_rules(chain_sequences: List[InteractionalSequence], target_participant: str):
     """
     Filtering rule to exclude interactional sequences based on their properties
     :param chain_sequences: list of interactional sequences
     :type chain_sequences: List[InteractionalSequence]
     :param target_participant: which speaker should be considered the target participant
     :type target_participant: str
-    :param kwargs: other user-defined keyword arguments not used in this function
-    :type kwargs: dict
     :return: list of interactional sequences with non-valid sequences removed
     :rtype: List[InteractionalSequence]
     """
@@ -104,13 +138,17 @@ def standard_filtering_rules(chain_sequences: List[InteractionalSequence], targe
     return chain_sequences
 
 
-def standard_path_selection_rules(path_list: List[Cost], selection_key: List[str], **kwargs):
+@register_user_function(
+    argument('--selection-key',
+             required=True,
+             nargs='+',
+             help='Key to decide which path is the best.')
+)
+def standard_path_selection_rules(path_list: List[Cost], selection_key: List[str]):
     """
     Sorts a list of Cost and return the best
     :param path_list: list of costs
     :type path_list: Cost
-    :param kwargs: other user-defined keyword arguments not used in this function
-    :type kwargs: dict
     :return: best cost (as defined by the sorting function and the keys used)
     :rtype: Cost
     """

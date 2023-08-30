@@ -2,7 +2,7 @@
 # -*- coding: utf8 -*-
 
 # -----------------------------------------------------------------------------
-#   File: graph_visualisation.py (as part of project conversations)
+#   File: plotter.py (as part of project conversations)
 #   Created: 05/07/2022 13:46
 #   Last Modified: 05/07/2022 13:46
 # -----------------------------------------------------------------------------
@@ -22,8 +22,8 @@ from typing import List, Set
 import graphviz
 from itertools import cycle
 
-from .Graph import Node
-from .utils import pairwise
+from conversations.graph.base.Graph import Node
+from conversations.utils import pairwise
 
 NODE_START_COLOR = 'chartreuse'
 NODE_END_COLOR = 'crimson'
@@ -192,7 +192,7 @@ def _timeline_alignment_subgraphs(segment_onsets: List, actor_names: List[str]) 
     return graphs
 
 
-def generate_interactional_sequence_visualisation(interactional_sequence: List[Node], highlight_edges: List[Node] = []):
+def plot(interactional_sequence: List[Node], highlight_edges: List[Node] = []):
     """
     Generates the graph of an interactional sequence
     :param interactional_sequence: tuple of nodes

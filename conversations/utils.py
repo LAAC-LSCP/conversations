@@ -1,6 +1,6 @@
 #!usr/bin/env python
 # -*- coding: utf8 -*-
-
+from copy import deepcopy
 # -----------------------------------------------------------------------------
 #   File: utils.py (as part of project conversations)
 #   Created: 15/06/2022 17:37
@@ -54,7 +54,20 @@ def overlap(onset: float, offset: float, target_onset: float, target_offset: flo
 
 
 def overlaps(onset: float, offset: float, target_onset: float, target_offset: float) -> bool:
-
+    """
+    Returns whether a segment starting at onset and finishing at offset and another
+    segment starting at target_onset and finishing at target_offset overlap
+    :param onset: onset of the first segment
+    :type onset: float
+    :param offset: offset of the second segment
+    :type offset: float
+    :param target_onset: onset of the second segment
+    :type target_onset: float
+    :param target_offset: offset of the second segment
+    :type target_offset: float
+    :return: Amount of overlap
+    :rtype: boolean
+    """
     return bool(overlap(onset, offset, target_onset, target_offset))
 
 
@@ -67,4 +80,12 @@ def flatten(iterable: Iterable) -> list:
     :return: flattened iterable
     :rtype: list
     """
-    return list(chain(*iterable))
+    R = []
+    L = deepcopy(iterable)
+    while L:
+        item = L.pop()
+        if isinstance(item, list):
+            L.extend(item)
+        else:
+            R.append(item)
+    return R[::-1]

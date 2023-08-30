@@ -18,7 +18,7 @@
 #       • 
 # -----------------------------------------------------------------------------
 
-from conversations.Graph import Node
+from conversations.graph.base.Node import Node
 
 class Segment(Node):
     """
