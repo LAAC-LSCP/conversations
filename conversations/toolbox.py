@@ -55,7 +55,15 @@ def get_turn_transitions_between_pair(df: pd.DataFrame, speakers: List, speaker_
     segs = df[df[speaker_column].isin(speakers) &
               ~df['inter_seq_index'].isnull()]
 
-    # Convert strings to pandas Int32 (/!\ not np.int32)
+    # In case of multiple values in is_prompt_to and is_response_to, explode the lines to be considered separated
+    segs['is_response_to'] = segs['is_response_to'].astype('string').str.split(',')
+    segs = segs.explode('is_response_to')
+    segs.loc[~segs['is_response_to'].isnull(),'is_response_to'] = segs[~segs['is_response_to'].isnull()]['is_response_to'].astype(float)
+
+    segs['is_prompt_to'] = segs['is_prompt_to'].astype('string').str.split(',')
+    segs = segs.explode('is_prompt_to')
+    segs.loc[~segs['is_prompt_to'].isnull(),'is_prompt_to'] = segs[~segs['is_prompt_to'].isnull()]['is_prompt_to'].astype(float)
+
     segs = segs.astype({'is_response_to': 'Int32', 'is_prompt_to': 'Int32'})
 
     # Get all prompts and responses
